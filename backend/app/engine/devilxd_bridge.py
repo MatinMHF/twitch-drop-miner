@@ -191,7 +191,7 @@ class FastAPIBridgeGUIManager:
         self.websockets = BridgeWebsockets(self)
         self.help = BridgeHelp()
         self.login = BridgeLogin(self)
-        self.close_requested = asyncio.Event()
+        self._close_event = asyncio.Event()
 
         # State cache for FastAPI / WebSockets
         self.status_text: str = "Idle"
@@ -207,6 +207,10 @@ class FastAPIBridgeGUIManager:
         self.on_channel_callback: Optional[Callable[[Optional[Any]], Any]] = None
         self.on_drop_callback: Optional[Callable[[Any], Any]] = None
         self.on_claim_callback: Optional[Callable[[str, str], Any]] = None
+
+    @property
+    def close_requested(self) -> bool:
+        return self._close_event.is_set()
 
     def print(self, *args, **kwargs):
         msg = " ".join(str(a) for a in args)
@@ -247,13 +251,13 @@ class FastAPIBridgeGUIManager:
         pass
 
     def close(self):
-        self.close_requested.set()
+        self._close_event.set()
 
     def prevent_close(self):
         pass
 
     async def wait_until_closed(self):
-        await self.close_requested.wait()
+        await self._close_event.wait()
 
 
 # Register stub in sys.modules["gui"]
