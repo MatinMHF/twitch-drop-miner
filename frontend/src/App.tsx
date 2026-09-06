@@ -4,9 +4,10 @@ import { Navbar } from './components/Navbar';
 import { QuickStats } from './components/QuickStats';
 import { ActiveMiningCard } from './components/ActiveMiningCard';
 import { WatchlistManager } from './components/WatchlistManager';
-import { DropCampaignList } from './components/DropCampaignList';
-import { DropHistoryList } from './components/DropHistoryList';
 import { LiveLogsViewer } from './components/LiveLogsViewer';
+import { ChannelsTab } from './components/ChannelsTab';
+import { InventoryTab } from './components/InventoryTab';
+import { HelpTab } from './components/HelpTab';
 import { TwitchDeviceAuthModal } from './components/TwitchDeviceAuthModal';
 import { SettingsModal } from './components/SettingsModal';
 import {
@@ -15,10 +16,17 @@ import {
   Loader2,
   Sparkles,
   ArrowRight,
+  Activity,
+  Radio,
+  Gift,
+  ListOrdered,
+  HelpCircle,
+  Settings,
 } from 'lucide-react';
 
 export const App: React.FC = () => {
   const { user, isLoading, login, setupAdmin } = useAuth();
+  const [currentTab, setCurrentTab] = useState<'overview' | 'channels' | 'inventory' | 'priority' | 'help'>('overview');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isTwitchAuthOpen, setIsTwitchAuthOpen] = useState(false);
   const [claimedCount] = useState(0);
@@ -206,7 +214,7 @@ export const App: React.FC = () => {
     );
   }
 
-  // Authenticated Dashboard
+  // Authenticated Dashboard with Tabs
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
       <Navbar
@@ -214,32 +222,115 @@ export const App: React.FC = () => {
         onOpenTwitchAuth={() => setIsTwitchAuthOpen(true)}
       />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-        {/* Quick Stats Grid */}
-        <QuickStats claimedCount={claimedCount} watchlistCount={watchlistCount} />
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        {/* Navigation Tabs Bar */}
+        <div className="flex items-center justify-between flex-wrap gap-3 pb-2 border-b border-slate-800/80">
+          <div className="flex items-center space-x-1.5 overflow-x-auto pb-1 max-w-full">
+            <button
+              onClick={() => setCurrentTab('overview')}
+              className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
+                currentTab === 'overview'
+                  ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/30'
+                  : 'bg-slate-900/60 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 border border-slate-800/80'
+              }`}
+            >
+              <Activity className="w-4 h-4" />
+              <span>Overview</span>
+            </button>
 
-        {/* Active Mining Hero Card */}
-        <ActiveMiningCard />
+            <button
+              onClick={() => setCurrentTab('channels')}
+              className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
+                currentTab === 'channels'
+                  ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/30'
+                  : 'bg-slate-900/60 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 border border-slate-800/80'
+              }`}
+            >
+              <Radio className="w-4 h-4" />
+              <span>Channels</span>
+            </button>
 
-        {/* 2-Column Responsive Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Left Column: Watchlist & History */}
-          <div className="space-y-6">
-            <WatchlistManager onWatchlistChanged={() => setWatchlistCount((c) => c + 1)} />
-            <DropHistoryList />
+            <button
+              onClick={() => setCurrentTab('inventory')}
+              className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
+                currentTab === 'inventory'
+                  ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/30'
+                  : 'bg-slate-900/60 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 border border-slate-800/80'
+              }`}
+            >
+              <Gift className="w-4 h-4" />
+              <span>Inventory</span>
+            </button>
+
+            <button
+              onClick={() => setCurrentTab('priority')}
+              className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
+                currentTab === 'priority'
+                  ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/30'
+                  : 'bg-slate-900/60 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 border border-slate-800/80'
+              }`}
+            >
+              <ListOrdered className="w-4 h-4" />
+              <span>Priority List</span>
+            </button>
+
+            <button
+              onClick={() => setCurrentTab('help')}
+              className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
+                currentTab === 'help'
+                  ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/30'
+                  : 'bg-slate-900/60 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 border border-slate-800/80'
+              }`}
+            >
+              <HelpCircle className="w-4 h-4" />
+              <span>Help & Guide</span>
+            </button>
           </div>
 
-          {/* Right Column: Campaigns & Live Logs */}
-          <div className="space-y-6">
-            <DropCampaignList />
-            <LiveLogsViewer />
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => setIsSettingsOpen(true)}
+              className="flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 transition-all"
+            >
+              <Settings className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Settings</span>
+            </button>
           </div>
         </div>
+
+        {/* Tab Content Rendering */}
+        {currentTab === 'overview' && (
+          <div className="space-y-6">
+            {/* Quick Stats */}
+            <QuickStats claimedCount={claimedCount} watchlistCount={watchlistCount} />
+
+            {/* Active Mining Hero Operations */}
+            <ActiveMiningCard />
+
+            {/* Overview Dual Grid: Watchlist & Live Logs */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <WatchlistManager onWatchlistChanged={() => setWatchlistCount((c) => c + 1)} />
+              <LiveLogsViewer />
+            </div>
+          </div>
+        )}
+
+        {currentTab === 'channels' && <ChannelsTab />}
+
+        {currentTab === 'inventory' && <InventoryTab />}
+
+        {currentTab === 'priority' && (
+          <div className="max-w-4xl mx-auto">
+            <WatchlistManager onWatchlistChanged={() => setWatchlistCount((c) => c + 1)} />
+          </div>
+        )}
+
+        {currentTab === 'help' && <HelpTab />}
       </main>
 
       {/* Footer */}
       <footer className="border-t border-slate-900 bg-slate-950/60 py-6 text-center text-xs text-slate-500">
-        <p>Twitch Drop Miner &bull; Self-hosted clean-room automated reward claimer.</p>
+        <p>Twitch Drops Miner &bull; Self-hosted clean-room automated reward claimer.</p>
       </footer>
 
       {/* Modals */}

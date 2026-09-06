@@ -103,6 +103,7 @@ export const api = {
 
   // Campaigns & Claims
   getActiveCampaigns: () => request<any[]>('/api/campaigns/active'),
+  getEligibleChannels: () => request<any[]>('/api/campaigns/channels'),
   getClaimedDrops: (limit = 50) => request<ClaimedDrop[]>(`/api/campaigns/history?limit=${limit}`),
 
   // Miner Control
