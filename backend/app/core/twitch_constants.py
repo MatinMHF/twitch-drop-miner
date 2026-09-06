@@ -26,8 +26,8 @@ TWITCH_OAUTH_VALIDATE_URL: str = os.getenv("TWITCH_OAUTH_VALIDATE_URL", "https:/
 TWITCH_OAUTH_REVOKE_URL: str = os.getenv("TWITCH_OAUTH_REVOKE_URL", "https://id.twitch.tv/oauth2/revoke")
 
 # Spade Analytics / Minute-Watched Tracker Endpoints
-DEFAULT_TWITCH_SPADE_URL: str = "https://video-edge-104.sjc01.hls.ttvnw.net/v1/segment/"
-TWITCH_SPADE_URL: str = os.getenv("TWITCH_SPADE_URL", "https://spade.twitch.tv/batched")
+DEFAULT_TWITCH_SPADE_URL: str = "https://spade.twitch.tv/"
+TWITCH_SPADE_URL: str = os.getenv("TWITCH_SPADE_URL", DEFAULT_TWITCH_SPADE_URL)
 
 
 # --- Persisted Query Hashes (SHA-256) ---

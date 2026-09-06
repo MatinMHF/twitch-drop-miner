@@ -89,20 +89,37 @@ class StreamWatcher:
                     if not playback_token or self.minutes_watched_in_session % 10 == 0:
                         playback_token = await self._gql_client.get_stream_playback_token(self.channel_login)
 
-                    # 2. Ping Usher HLS stream endpoint to keep viewer session active on Twitch Edge
+                    # 2. Ping Usher HLS stream endpoint and variant playlist to register active playback session
                     if playback_token and "value" in playback_token and "signature" in playback_token:
                         val = urllib.parse.quote_plus(playback_token["value"])
                         sig = playback_token["signature"]
                         usher_url = (
                             f"https://usher.ttvnw.net/api/channel/hls/{self.channel_login}.m3u8"
-                            f"?client_id={self._gql_client.client_id}&token={val}&sig={sig}&allow_source=true&allow_audio_only=true"
+                            f"?client_id={self._gql_client.client_id}&token={val}&sig={sig}&allow_source=true&allow_audio_only=true&fast_bread=true"
                         )
                         try:
-                            await http_client.get(usher_url)
+                            usher_res = await http_client.get(usher_url)
+                            if usher_res.status_code == 200:
+                                # Fetch variant media playlist (audio/low) to confirm playback session with Edge cluster
+                                lines = usher_res.text.splitlines()
+                                variant_urls = [line.strip() for line in lines if line.strip().startswith("http")]
+                                if variant_urls:
+                                    await http_client.get(variant_urls[-1])  # audio_only or lowest segment list
                         except Exception as exc:
-                            logger.debug(f"Usher stream ping notice: {exc}")
+                            logger.debug(f"Usher/Variant stream ping notice for @{self.channel_login}: {exc}")
 
-                    # 3. Increment minutes watched and record timestamp
+                    # 3. Dispatch Spade minute-watched telemetry heartbeat
+                    try:
+                        await self._spade_tracker.send_heartbeat(
+                            channel_id=self.channel_id,
+                            channel_login=self.channel_login,
+                            broadcast_id=self.stream_id,
+                            user_id=self.twitch_user_id,
+                        )
+                    except Exception as exc:
+                        logger.debug(f"Spade heartbeat notice: {exc}")
+
+                    # 4. Increment minutes watched and record timestamp
                     consecutive_failures = 0
                     self.minutes_watched_in_session += 1
                     self.last_heartbeat_at = datetime.now(timezone.utc)
