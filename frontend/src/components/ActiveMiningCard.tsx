@@ -6,13 +6,10 @@ import {
   Pause,
   RotateCw,
   Square,
-  Radio,
-  Clock,
-  Eye,
   Gift,
-  ExternalLink,
-  Layers,
   Sparkles,
+  CheckCircle2,
+  Zap,
 } from 'lucide-react';
 
 export const ActiveMiningCard: React.FC = () => {
@@ -32,19 +29,15 @@ export const ActiveMiningCard: React.FC = () => {
 
   const isMining = status?.state === 'MINING';
   const isPaused = status?.state === 'PAUSED';
-  const targets = status?.active_targets && status.active_targets.length > 0 
-    ? status.active_targets 
-    : (status?.active_channel ? [{
+  const targets = status?.active_targets && status.active_targets.length > 0
+    ? status.active_targets
+    : (status?.active_game_name ? [{
         game_id: status.active_game_id || '',
         game_name: status.active_game_name || 'Watchlisted Game',
         campaign_id: status.active_campaign_id || '',
         campaign_name: status.active_campaign_name || 'Drop Campaign',
         drop_id: status.current_drop_id || '',
         drop_name: status.current_drop_name || 'Drop Reward',
-        required_minutes: status.current_drop_required_minutes || 0,
-        current_minutes: status.current_drop_minutes_watched || 0,
-        progress_percent: status.current_drop_progress_percent || 0,
-        channel: status.active_channel,
       }] : []);
 
   return (
@@ -64,19 +57,17 @@ export const ActiveMiningCard: React.FC = () => {
             />
             <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
               <span>Active Mining Operations</span>
-              {isMining && targets.length > 1 && (
-                <span className="flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                  <Layers className="w-3 h-3" />
-                  <span>{targets.length} Concurrent Streams</span>
+              {isMining && targets.length > 0 && (
+                <span className="flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-300 border border-purple-500/20">
+                  <Zap className="w-3 h-3" />
+                  <span>{targets.length} Active {targets.length === 1 ? 'Target' : 'Targets'}</span>
                 </span>
               )}
             </h2>
           </div>
           <p className="text-xs text-slate-400 mt-1">
             {isMining
-              ? targets.length > 1
-                ? `Mining ${targets.length} games simultaneously across active drop campaigns.`
-                : `Currently mining drops for ${targets[0]?.game_name || status?.active_game_name || 'watchlisted game'}`
+              ? `Automated headless drop claimer is actively mining rewards for your watchlisted games.`
               : isPaused
               ? 'Mining paused. Resume when you are ready.'
               : 'Idle — Watching for eligible drop campaigns in your watchlist...'}
@@ -89,7 +80,7 @@ export const ActiveMiningCard: React.FC = () => {
             <button
               onClick={() => handleControl('pause')}
               disabled={isActing}
-              className="flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 transition-all disabled:opacity-50"
+              className="flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/30 transition-all disabled:opacity-50"
             >
               <Pause className="w-3.5 h-3.5" />
               <span>Pause</span>
@@ -98,7 +89,7 @@ export const ActiveMiningCard: React.FC = () => {
             <button
               onClick={() => handleControl('resume')}
               disabled={isActing}
-              className="flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 transition-all disabled:opacity-50"
+              className="flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30 transition-all disabled:opacity-50"
             >
               <Play className="w-3.5 h-3.5" />
               <span>Resume</span>
@@ -128,7 +119,7 @@ export const ActiveMiningCard: React.FC = () => {
             <button
               onClick={() => handleControl('stop')}
               disabled={isActing}
-              className="flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 transition-all disabled:opacity-50"
+              className="flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-300 border border-rose-500/30 transition-all disabled:opacity-50"
             >
               <Square className="w-3.5 h-3.5" />
               <span>Stop</span>
@@ -137,109 +128,47 @@ export const ActiveMiningCard: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Mining Grid Body */}
+      {/* Active Targets List */}
       {isMining && targets.length > 0 ? (
-        <div className={`mt-6 grid gap-6 ${targets.length === 1 ? 'grid-cols-1' : 'grid-cols-1 xl:grid-cols-2'}`}>
-          {targets.map((target, idx) => {
-            const ch = target.channel;
-            const progressPct = target.progress_percent || 0;
-            const minutesLeft = Math.max(0, (target.required_minutes || 0) - (target.current_minutes || 0));
-
-            return (
-              <div
-                key={target.campaign_id || idx}
-                className="bg-slate-950/70 border border-slate-800/90 rounded-xl p-5 relative overflow-hidden transition-all hover:border-slate-700"
-              >
-                {/* Top Badge Row */}
-                <div className="flex items-center justify-between gap-2 mb-3">
-                  <span className="text-xs font-bold text-purple-400 uppercase tracking-wider flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-                    <span>{target.game_name}</span>
-                  </span>
-                  <span className="flex items-center space-x-1 text-[11px] text-rose-400 bg-rose-950/40 px-2 py-0.5 rounded-full border border-rose-500/20 font-medium">
-                    <Radio className="w-3 h-3 animate-pulse" />
-                    <span>LIVE</span>
-                  </span>
-                </div>
-
-                {/* Streamer Header */}
-                <div className="flex items-start justify-between gap-4 mb-4">
+        <div className={`mt-6 grid gap-4 ${targets.length === 1 ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'}`}>
+          {targets.map((target, idx) => (
+            <div
+              key={target.campaign_id || idx}
+              className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-4 relative overflow-hidden transition-all hover:border-slate-700 flex flex-col justify-between space-y-3"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center space-x-2.5 min-w-0">
+                  <div className="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0 border border-purple-500/20">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
                   <div className="min-w-0">
-                    <div className="flex items-center space-x-2">
-                      <h3 className="font-bold text-base text-white truncate">
-                        @{ch?.channel_display_name || ch?.channel_login || 'Channel'}
-                      </h3>
-                      {ch?.channel_login && (
-                        <a
-                          href={`https://twitch.tv/${ch.channel_login}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-slate-400 hover:text-purple-400 transition-colors"
-                          title="Open Twitch Channel"
-                        >
-                          <ExternalLink className="w-3.5 h-3.5" />
-                        </a>
-                      )}
-                    </div>
-                    <p className="text-xs text-slate-400 mt-0.5 line-clamp-1">
-                      {ch?.title || 'Drops Enabled Stream'}
-                    </p>
-                  </div>
-
-                  <div className="text-right shrink-0">
-                    <span className="flex items-center justify-end space-x-1 text-xs text-slate-400">
-                      <Eye className="w-3.5 h-3.5 text-slate-500" />
-                      <span>{ch?.viewers_count?.toLocaleString() || '0'}</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400">
+                      {target.game_name}
                     </span>
+                    <h3 className="text-sm font-bold text-white truncate">
+                      {target.drop_name || 'Drop Reward'}
+                    </h3>
                   </div>
                 </div>
 
-                {/* Drop Info & Progress */}
-                <div className="bg-slate-900/90 rounded-lg p-3.5 border border-slate-800/80">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center space-x-2 min-w-0">
-                      <Gift className="w-4 h-4 text-purple-400 shrink-0" />
-                      <div className="min-w-0">
-                        <h4 className="font-semibold text-white text-xs truncate">
-                          {target.drop_name || 'Drop Reward'}
-                        </h4>
-                        <p className="text-[11px] text-slate-400 truncate">
-                          {target.campaign_name || 'Campaign'}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <span className="text-lg font-black text-purple-400">{progressPct}%</span>
-                      <p className="text-[10px] text-slate-500">
-                        {target.current_minutes} / {target.required_minutes}m
-                      </p>
-                    </div>
-                  </div>
+                <span className="flex items-center space-x-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 shrink-0">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>Mining Active</span>
+                </span>
+              </div>
 
-                  {/* Progress Bar */}
-                  <div className="w-full bg-slate-800/80 h-2.5 rounded-full overflow-hidden p-0.5 border border-slate-700/50 my-2">
-                    <div
-                      className="bg-gradient-to-r from-purple-600 via-indigo-500 to-purple-400 h-full rounded-full transition-all duration-500 shadow-sm shadow-purple-500/30"
-                      style={{ width: `${progressPct}%` }}
-                    />
-                  </div>
-
-                  {/* Progress Footer */}
-                  <div className="flex items-center justify-between text-[11px] text-slate-400 mt-2">
-                    <span className="flex items-center space-x-1">
-                      <Clock className="w-3 h-3 text-slate-500" />
-                      <span>
-                        {minutesLeft > 0
-                          ? `Est. ${minutesLeft}m left`
-                          : 'Reward ready for auto-claim!'}
-                      </span>
-                    </span>
-                    <span className="text-emerald-400 font-medium">Auto-Claim Active</span>
-                  </div>
+              <div className="flex items-center justify-between text-xs text-slate-400 pt-2 border-t border-slate-800/60">
+                <div className="flex items-center space-x-1.5 min-w-0">
+                  <Gift className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                  <span className="truncate">{target.campaign_name || 'Active Campaign'}</span>
+                </div>
+                <div className="flex items-center space-x-1 text-[11px] text-purple-600 dark:text-purple-400 font-medium shrink-0">
+                  <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                  <span>Auto-Claim Enabled</span>
                 </div>
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
       ) : (
         <div className="mt-6 py-8 px-4 text-center border border-dashed border-slate-800 rounded-xl bg-slate-950/30">
@@ -252,10 +181,11 @@ export const ActiveMiningCard: React.FC = () => {
               : 'Miner is idle. Add games with active drops to your watchlist to start mining automatically.'}
           </p>
           <p className="text-xs text-slate-500 mt-1">
-            Concurrent multi-stream engine runs 24/7 in the background with zero video bandwidth.
+            Clean headless automated reward claimer running 24/7.
           </p>
         </div>
       )}
     </div>
   );
 };
+
