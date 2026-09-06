@@ -198,6 +198,9 @@ class MiningWorker:
         self.bridge.on_claim_callback = self._handle_drop_claimed
 
         # Pre-seed credentials directly into DevilXD auth state
+        import secrets
+        self.twitch._auth_state.device_id = secrets.token_hex(16)
+        self.twitch._auth_state.session_id = secrets.token_hex(16)
         self.twitch._auth_state.access_token = access_token
         self.twitch._auth_state.user_id = int(account.twitch_user_id)
         self.twitch._auth_state._logged_in.set()

@@ -18,6 +18,14 @@ if str(_devilxd_dir) not in sys.path:
 
 from app.core.logging import logger
 
+# Ensure TwitchDrops logger outputs to stdout via the redacting handler
+_td_logger = logging.getLogger("TwitchDrops")
+_td_logger.setLevel(logging.INFO)
+if logger.handlers:
+    for h in logger.handlers:
+        if h not in _td_logger.handlers:
+            _td_logger.addHandler(h)
+
 
 class DummyButton:
     def config(self, *args, **kwargs):
