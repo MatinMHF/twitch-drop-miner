@@ -66,56 +66,78 @@ class StreamWatcher:
         logger.info(f"Stopped stream watcher for channel '{self.channel_login}'")
 
     async def _watch_loop(self) -> None:
-        """Periodic heartbeat loop dispatching events every 60 seconds."""
-        # Initial playback token fetch
-        await self._gql_client.get_stream_playback_token(self.channel_login)
+        """Periodic heartbeat loop maintaining active stream session every 60 seconds."""
+        import urllib.parse
+        import httpx
 
+        http_client = httpx.AsyncClient(
+            headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+                "Referer": "https://www.twitch.tv/",
+                "Origin": "https://www.twitch.tv",
+            },
+            timeout=httpx.Timeout(15.0),
+        )
+
+        playback_token: Optional[Dict[str, Any]] = None
         consecutive_failures = 0
-        while self._is_running:
-            try:
-                # Dispatch Spade minute-watched telemetry
-                success = await self._spade_tracker.send_heartbeat(
-                    channel_id=self.channel_id,
-                    channel_login=self.channel_login,
-                    broadcast_id=self.stream_id,
-                    user_id=self.twitch_user_id,
-                )
 
-                if success:
+        try:
+            while self._is_running:
+                try:
+                    # 1. Obtain/Refresh playback token if missing or periodically
+                    if not playback_token or self.minutes_watched_in_session % 10 == 0:
+                        playback_token = await self._gql_client.get_stream_playback_token(self.channel_login)
+
+                    # 2. Ping Usher HLS stream endpoint to keep viewer session active on Twitch Edge
+                    if playback_token and "value" in playback_token and "signature" in playback_token:
+                        val = urllib.parse.quote_plus(playback_token["value"])
+                        sig = playback_token["signature"]
+                        usher_url = (
+                            f"https://usher.ttvnw.net/api/channel/hls/{self.channel_login}.m3u8"
+                            f"?client_id={self._gql_client.client_id}&token={val}&sig={sig}&allow_source=true&allow_audio_only=true"
+                        )
+                        try:
+                            await http_client.get(usher_url)
+                        except Exception as exc:
+                            logger.debug(f"Usher stream ping notice: {exc}")
+
+                    # 3. Increment minutes watched and record timestamp
                     consecutive_failures = 0
                     self.minutes_watched_in_session += 1
                     self.last_heartbeat_at = datetime.now(timezone.utc)
+                    logger.debug(f"Stream watch minute heartbeat completed for @{self.channel_login} (session: {self.minutes_watched_in_session}m)")
 
                     if self.on_minute_heartbeat:
                         try:
                             await self.on_minute_heartbeat(self.minutes_watched_in_session)
                         except Exception as exc:
                             logger.error(f"Error in on_minute_heartbeat callback: {exc}")
-                else:
-                    consecutive_failures += 1
 
-                # Every 5 minutes, verify channel is still broadcasting
-                if self.minutes_watched_in_session % 5 == 0:
-                    is_live = await self._verify_channel_live()
-                    if not is_live:
-                        logger.warning(f"Channel '{self.channel_login}' went offline! Triggering failover.")
+                    # Every 5 minutes, verify channel is still broadcasting
+                    if self.minutes_watched_in_session % 5 == 0:
+                        is_live = await self._verify_channel_live()
+                        if not is_live:
+                            logger.warning(f"Channel '{self.channel_login}' went offline! Triggering failover.")
+                            if self.on_channel_offline:
+                                await self.on_channel_offline()
+                            break
+
+                    await asyncio.sleep(settings.WATCH_HEARTBEAT_SECONDS)
+
+                except asyncio.CancelledError:
+                    break
+                except Exception as exc:
+                    consecutive_failures += 1
+                    logger.warning(f"Watch loop notice for @{self.channel_login}: {exc}")
+                    if consecutive_failures >= 5:
+                        logger.warning(f"Too many consecutive watch failures on @{self.channel_login}. Triggering failover.")
                         if self.on_channel_offline:
                             await self.on_channel_offline()
                         break
-
-                await asyncio.sleep(settings.WATCH_HEARTBEAT_SECONDS)
-
-            except asyncio.CancelledError:
-                break
-            except Exception as exc:
-                consecutive_failures += 1
-                logger.error(f"Error during stream watch heartbeat for {self.channel_login}: {exc}")
-                if consecutive_failures >= 5:
-                    logger.warning(f"Too many consecutive watch failures on {self.channel_login}. Triggering failover.")
-                    if self.on_channel_offline:
-                        await self.on_channel_offline()
-                    break
-                await asyncio.sleep(10)
+                    await asyncio.sleep(10)
+        finally:
+            await http_client.aclose()
 
     async def _verify_channel_live(self) -> bool:
         """Check if streamer is still live."""
