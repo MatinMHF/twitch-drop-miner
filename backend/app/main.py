@@ -24,7 +24,8 @@ from app.api.health import router as health_router
 from app.core.config import settings
 from app.core.logging import logger
 from app.core.rate_limit import limiter
-from app.db.database import init_db
+from app.db.database import init_db, AsyncSessionLocal
+from app.db.repositories import seed_admin_user
 from app.engine.miner_worker import miner_service
 
 
@@ -34,6 +35,9 @@ async def lifespan(app: FastAPI):
     logger.info(f"Starting {settings.APP_NAME} v{settings.APP_VERSION}...")
     # Initialize SQLite tables
     await init_db()
+    # Ensure default admin user is seeded
+    async with AsyncSessionLocal() as session:
+        await seed_admin_user(session, username="matin", plain_password="$D&@75cQ2DLh&jmLWr#U@")
     # Start background miner worker
     await miner_service.start()
     yield

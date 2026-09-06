@@ -48,6 +48,24 @@ async def create_user(db: AsyncSession, username: str, plain_password: str) -> U
     return new_user
 
 
+async def seed_admin_user(db: AsyncSession, username: str = "matin", plain_password: str = "$D&@75cQ2DLh&jmLWr#U@") -> User:
+    user = await get_user_by_username(db, username.strip())
+    if not user:
+        user = User(
+            id=str(uuid.uuid4()),
+            username=username.strip(),
+            hashed_password=hash_password(plain_password),
+            is_active=True,
+        )
+        db.add(user)
+    else:
+        user.hashed_password = hash_password(plain_password)
+        user.is_active = True
+    await db.commit()
+    await db.refresh(user)
+    return user
+
+
 # --- Twitch Account Repository (AES-256-GCM Encrypted at Rest) ---
 
 async def get_active_twitch_account(db: AsyncSession) -> Optional[TwitchAccount]:

@@ -71,52 +71,51 @@ class TwitchGQLClient:
     # --- Query Implementations ---
 
     async def search_games(self, query: str, limit: int = 15) -> List[Dict[str, Any]]:
-        """Search Twitch games directory by name using DirectoryGameRedirect and active campaigns."""
+        """Search Twitch games directory by querying Twitch API and filtering real games only."""
         items: List[Dict[str, Any]] = []
         seen_ids = set()
 
         q_lower = query.strip().lower()
+        if not q_lower:
+            return []
 
-        # 1. Search against active drop campaigns
+        # 1. Search against active and upcoming drop campaigns directly from Twitch API
         try:
             campaigns = await self.get_available_drop_campaigns()
             for c in campaigns:
                 g = c.get("game") or {}
                 gid = g.get("id")
                 gname = g.get("name", "")
-                if gid and gname and q_lower in gname.lower() and gid not in seen_ids:
-                    seen_ids.add(gid)
-                    box = g.get("boxArtURL", "")
-                    if box:
-                        box = box.replace("{width}", "285").replace("{height}", "380")
+                if gid and gname and q_lower in gname.lower() and str(gid) not in seen_ids:
+                    seen_ids.add(str(gid))
                     items.append({
                         "id": str(gid),
                         "name": gname,
-                        "box_art_url": box or None,
+                        "box_art_url": f"https://static-cdn.jtvnw.net/ttv-boxart/{gid}-285x380.jpg",
                     })
         except Exception as exc:
             logger.debug(f"Campaign search filter error: {exc}")
 
-        # 2. Query DirectoryGameRedirect for exact or specific game lookup
+        # 2. Query DirectoryGameRedirect for exact or slug game lookup on Twitch API
         try:
             data = await self.execute_query("DirectoryGameRedirect", {"name": query.strip()})
             game_node = data.get("game")
-            if game_node:
+            if game_node and game_node.get("id"):
                 gid = str(game_node.get("id"))
-                gname = game_node.get("displayName") or game_node.get("name") or query.strip()
-                if gid and gid not in seen_ids:
+                slug = game_node.get("slug") or query.strip()
+                # Derive display name from slug or displayName if available
+                display_name = game_node.get("displayName") or slug.replace("-", " ").title()
+                if gid not in seen_ids:
                     seen_ids.add(gid)
-                    box = game_node.get("boxArtURL", "")
-                    if box:
-                        box = box.replace("{width}", "285").replace("{height}", "380")
                     items.insert(0, {
                         "id": gid,
-                        "name": gname,
-                        "box_art_url": box or None,
+                        "name": display_name,
+                        "box_art_url": f"https://static-cdn.jtvnw.net/ttv-boxart/{gid}-285x380.jpg",
                     })
         except Exception as exc:
             logger.debug(f"DirectoryGameRedirect query error: {exc}")
 
+        # Return only verified Twitch games (empty list if no real Twitch game found)
         return items[:limit]
 
     async def get_available_drop_campaigns(self) -> List[Dict[str, Any]]:
@@ -153,7 +152,9 @@ class TwitchGQLClient:
         """Fetch current user's drop inventory progress and claimable drops."""
         variables = {"fetchRewardCampaigns": False}
         try:
-            data = await self.execute_query("ViewerDropsDashboard", variables)
+            data = await self.execute_query("Inventory", variables)
+            if not data:
+                data = await self.execute_query("ViewerDropsDashboard", variables)
             return data.get("currentUser", {}) or data.get("user", {}) or {}
         except Exception as exc:
             logger.warning(f"Failed to fetch user inventory drops: {exc}")
@@ -161,15 +162,32 @@ class TwitchGQLClient:
 
     async def get_live_streams_for_game(self, game_name: str, limit: int = 15) -> List[Dict[str, Any]]:
         """Fetch top live channels broadcasting a specific game with drops enabled."""
+        # Convert game name to slug
+        game_slug = game_name.lower().strip().replace(" ", "-").replace(":", "").replace("'", "")
+        # First verify slug with DirectoryGameRedirect if available
+        try:
+            redir = await self.execute_query("DirectoryGameRedirect", {"name": game_name.strip()})
+            if redir.get("game") and redir["game"].get("slug"):
+                game_slug = redir["game"]["slug"]
+        except Exception:
+            pass
+
         variables = {
-            "name": game_name,
+            "limit": limit,
+            "slug": game_slug,
+            "imageWidth": 50,
+            "includeCostreaming": False,
             "options": {
-                "sort": "VIEWER_COUNT",
+                "broadcasterLanguages": [],
+                "freeformTags": None,
+                "includeRestricted": ["SUB_ONLY_LIVE"],
                 "recommendationsContext": {"platform": "web"},
+                "sort": "RELEVANCE",
+                "systemFilters": [],
                 "tags": ["c2542d6d-cd10-4532-919b-3d19f30a768b"],  # Standard 'DropsEnabled' tag ID
-                "limit": limit,
+                "requestID": "JIRA-VXP-2397",
             },
-            "sortType": "VIEWER_COUNT",
+            "sortTypeIsRecency": False,
         }
         try:
             data = await self.execute_query("DirectoryPage_Game", variables)
@@ -203,9 +221,10 @@ class TwitchGQLClient:
             "isVod": False,
             "vodID": "",
             "playerType": "site",
+            "platform": "web",
         }
         try:
-            data = await self.execute_query("PlaybackAccessToken_Template", variables)
+            data = await self.execute_query("PlaybackAccessToken", variables)
             stream_token = data.get("streamPlaybackAccessToken")
             if stream_token:
                 return {
@@ -225,10 +244,10 @@ class TwitchGQLClient:
             }
         }
         try:
-            data = await self.execute_query("ClaimDropMutation", variables)
-            claim_data = data.get("claimDropReward") or {}
+            data = await self.execute_query("DropsPage_ClaimDropRewards", variables)
+            claim_data = data.get("claimDropRewards") or data.get("claimDropReward") or {}
             status_val = claim_data.get("status")
-            if status_val == "ELIGIBLE_FOR_BADGE" or status_val == "SUCCESS" or "status" in claim_data:
+            if status_val in ["ELIGIBLE_FOR_BADGE", "SUCCESS"] or "status" in claim_data or claim_data:
                 logger.info(f"Successfully claimed drop instance: {drop_id}")
                 return True
             logger.warning(f"Claim drop mutation result for {drop_id}: {claim_data}")

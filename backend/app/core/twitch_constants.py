@@ -46,6 +46,10 @@ PERSISTED_QUERY_HASHES: Dict[str, str] = {
         "TWITCH_HASH_VIEWER_DROPS_DASHBOARD",
         "d9cae7761dafab85908c85e6683cb4201b449e66ac3bb5e894f15ff12aeafaa7",
     ),
+    "DropsPage_ClaimDropRewards": os.getenv(
+        "TWITCH_HASH_CLAIM_DROP",
+        "a455deea71bdc9015b78eb49f4acfbce8baa7ccbedd28e549bb025bd0f751930",
+    ),
     "ClaimDropMutation": os.getenv(
         "TWITCH_HASH_CLAIM_DROP",
         "a455deea71bdc9015b78eb49f4acfbce8baa7ccbedd28e549bb025bd0f751930",
@@ -54,14 +58,14 @@ PERSISTED_QUERY_HASHES: Dict[str, str] = {
         "TWITCH_HASH_DROP_CAMPAIGN_CLAIM_DROP",
         "a455deea71bdc9015b78eb49f4acfbce8baa7ccbedd28e549bb025bd0f751930",
     ),
+    "Inventory": os.getenv(
+        "TWITCH_HASH_INVENTORY",
+        "8337eb8541b314040b0edde0c09c5c7a2783ba1960aa9edfbf3bac16d0fec404",
+    ),
     # Directory & Channels
     "DirectoryPage_Game": os.getenv(
         "TWITCH_HASH_DIRECTORY_GAME",
         "86bcceb4e8b1a51256ff8eed8bd8aae4acacf80d737efe904f84f3aeadf8cafd",
-    ),
-    "DirectoryRoot_Directory": os.getenv(
-        "TWITCH_HASH_DIRECTORY_ROOT",
-        "76192cfba9e1bf0fb4440078b17c5b61b24d7cb0efb32e14bc2bc3b6cbbe1d72",
     ),
     "DirectoryGameRedirect": os.getenv(
         "TWITCH_HASH_DIRECTORY_GAME_REDIRECT",
@@ -71,21 +75,17 @@ PERSISTED_QUERY_HASHES: Dict[str, str] = {
         "TWITCH_HASH_SEARCH_FOR",
         "1f0300090caceec51f33c5e20647aceff9017f740f223c3c532ba6fa59f6b6cc",
     ),
-    "ChannelShell": os.getenv(
-        "TWITCH_HASH_CHANNEL_SHELL",
-        "c3ea5a50b73c242e22c07b69c6cf260840c83a1523dd0fb8a9fb462f4fb89e3f",
-    ),
     "VideoPlayerStreamInfoOverlayChannel": os.getenv(
         "TWITCH_HASH_STREAM_INFO",
         "198492e0857f6aedead9665c81c5a06d67b25b58034649687124083ff288597d",
     ),
-    "PlaybackAccessToken_Template": os.getenv(
+    "PlaybackAccessToken": os.getenv(
         "TWITCH_HASH_PLAYBACK_ACCESS_TOKEN",
         "ed230aa1e33e07eebb8928504583da78a5173989fadfb1ac94be06a04f3cdbe9",
     ),
-    "CoreActionsMinuteWatched": os.getenv(
-        "TWITCH_HASH_MINUTE_WATCHED",
-        "0f223a272782e4e16dcf3ee43f2a8999818817c181775a74ff9ee1cc9ff740f9",
+    "PlaybackAccessToken_Template": os.getenv(
+        "TWITCH_HASH_PLAYBACK_ACCESS_TOKEN",
+        "ed230aa1e33e07eebb8928504583da78a5173989fadfb1ac94be06a04f3cdbe9",
     ),
 }
 

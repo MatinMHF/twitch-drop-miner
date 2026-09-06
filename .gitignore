@@ -46,6 +46,9 @@ data/
 .env
 .env.local
 .env.*.local
+Twitch.txt
+*.pem
+*.key
 
 # IDE
 .vscode/
