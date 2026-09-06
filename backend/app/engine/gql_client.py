@@ -166,23 +166,52 @@ class TwitchGQLClient:
         return items[:limit]
 
     async def get_available_drop_campaigns(self) -> List[Dict[str, Any]]:
-        """Fetch all active and upcoming Drop campaigns."""
+        """Fetch all active and upcoming Drop campaigns from Inventory and Dashboard."""
+        campaigns_by_id: Dict[str, Dict[str, Any]] = {}
         variables = {"fetchRewardCampaigns": False}
+
+        # 1. Primary: Fetch from user Inventory (contains active in-progress campaigns with full details)
         try:
-            data = await self.execute_query("ViewerDropsDashboard", variables)
-            user_data = data.get("currentUser", {}) or data.get("user", {}) or {}
-            campaigns = (
-                user_data.get("dropCampaigns", [])
-                or user_data.get("dropCampaignsInProgress", [])
+            inv_data = await self.execute_query("Inventory", variables)
+            user_inv = inv_data.get("currentUser", {}) or {}
+            inv_node = user_inv.get("inventory", {}) if isinstance(user_inv, dict) else {}
+            in_prog = inv_node.get("dropCampaignsInProgress", []) or []
+            for c in in_prog:
+                if c and isinstance(c, dict) and "id" in c:
+                    campaigns_by_id[c["id"]] = c
+        except Exception as exc:
+            logger.debug(f"Failed to fetch campaigns from Inventory: {exc}")
+
+        # 2. Secondary: Fetch from ViewerDropsDashboard
+        try:
+            dash_data = await self.execute_query("ViewerDropsDashboard", variables)
+            user_dash = dash_data.get("currentUser", {}) or dash_data.get("user", {}) or {}
+            dash_campaigns = (
+                user_dash.get("dropCampaigns", [])
+                or user_dash.get("dropCampaignsInProgress", [])
                 or []
             )
-            return [c for c in campaigns if c]
+            for c in dash_campaigns:
+                if c and isinstance(c, dict) and "id" in c:
+                    if c["id"] not in campaigns_by_id:
+                        campaigns_by_id[c["id"]] = c
         except Exception as exc:
-            logger.warning(f"Failed to fetch available drop campaigns: {exc}")
-            return []
+            logger.debug(f"Failed to fetch campaigns from ViewerDropsDashboard: {exc}")
+
+        return list(campaigns_by_id.values())
 
     async def get_campaign_details(self, campaign_id: str) -> Optional[Dict[str, Any]]:
         """Fetch detailed drop rules and progress for a specific campaign."""
+        # 1. Check known campaigns first
+        try:
+            campaigns = await self.get_available_drop_campaigns()
+            for c in campaigns:
+                if c.get("id") == campaign_id:
+                    return c
+        except Exception:
+            pass
+
+        # 2. Query DropCampaignDetails if needed
         variables = {
             "dropID": campaign_id,
             "channelLogin": "",
@@ -190,28 +219,33 @@ class TwitchGQLClient:
         try:
             data = await self.execute_query("DropCampaignDetails", variables)
             user_node = data.get("user", {}) or data.get("currentUser", {}) or {}
-            return user_node.get("dropCampaign")
+            if user_node and user_node.get("dropCampaign"):
+                return user_node.get("dropCampaign")
         except Exception as exc:
-            logger.warning(f"Failed to fetch campaign details for {campaign_id}: {exc}")
-            return None
+            logger.debug(f"Failed to fetch campaign details for {campaign_id}: {exc}")
+        return None
 
     async def get_inventory_drops(self) -> Dict[str, Any]:
         """Fetch current user's drop inventory progress and claimable drops."""
         variables = {"fetchRewardCampaigns": False}
         try:
             data = await self.execute_query("Inventory", variables)
-            if not data:
-                data = await self.execute_query("ViewerDropsDashboard", variables)
-            return data.get("currentUser", {}) or data.get("user", {}) or {}
+            user = data.get("currentUser", {}) or data.get("user", {}) or {}
+            inv_node = user.get("inventory", {}) if isinstance(user, dict) else {}
+            in_prog = inv_node.get("dropCampaignsInProgress", []) if isinstance(inv_node, dict) else []
+            game_events = inv_node.get("gameEventDrops", []) if isinstance(inv_node, dict) else []
+            return {
+                "dropCampaignsInProgress": in_prog,
+                "gameEventDrops": game_events,
+                "user": user,
+            }
         except Exception as exc:
             logger.warning(f"Failed to fetch user inventory drops: {exc}")
-            return {}
+            return {"dropCampaignsInProgress": [], "gameEventDrops": []}
 
     async def get_live_streams_for_game(self, game_name: str, limit: int = 15) -> List[Dict[str, Any]]:
-        """Fetch top live channels broadcasting a specific game with drops enabled."""
-        # Convert game name to slug
+        """Fetch top live channels broadcasting a specific game."""
         game_slug = game_name.lower().strip().replace(" ", "-").replace(":", "").replace("'", "")
-        # First verify slug with DirectoryGameRedirect if available
         try:
             redir = await self.execute_query("DirectoryGameRedirect", {"name": game_name.strip()})
             if redir.get("game") and redir["game"].get("slug"):
@@ -219,6 +253,14 @@ class TwitchGQLClient:
         except Exception:
             pass
 
+        # 1. Try with DropsEnabled tag
+        streams = await self._fetch_directory_streams(game_name, game_slug, limit, ["c2542d6d-cd10-4532-919b-3d19f30a768b"])
+        # 2. Fallback to general live streams in game category if no tagged streams found
+        if not streams:
+            streams = await self._fetch_directory_streams(game_name, game_slug, limit, [])
+        return streams
+
+    async def _fetch_directory_streams(self, game_name: str, game_slug: str, limit: int, tags: List[str]) -> List[Dict[str, Any]]:
         variables = {
             "limit": limit,
             "slug": game_slug,
@@ -231,7 +273,7 @@ class TwitchGQLClient:
                 "recommendationsContext": {"platform": "web"},
                 "sort": "RELEVANCE",
                 "systemFilters": [],
-                "tags": ["c2542d6d-cd10-4532-919b-3d19f30a768b"],  # Standard 'DropsEnabled' tag ID
+                "tags": tags,
                 "requestID": "JIRA-VXP-2397",
             },
             "sortTypeIsRecency": False,
@@ -246,18 +288,18 @@ class TwitchGQLClient:
                 broadcaster = node.get("broadcaster", {})
                 if node and broadcaster:
                     streams.append({
-                        "channel_id": broadcaster.get("id"),
+                        "channel_id": str(broadcaster.get("id")),
                         "channel_login": broadcaster.get("login"),
                         "channel_display_name": broadcaster.get("displayName"),
                         "title": node.get("title", ""),
                         "viewers_count": node.get("viewersCount", 0),
                         "game_name": game_name,
                         "is_live": True,
-                        "stream_id": node.get("id"),
+                        "stream_id": str(node.get("id")),
                     })
             return streams
         except Exception as exc:
-            logger.warning(f"Failed to fetch live streams for game '{game_name}': {exc}")
+            logger.debug(f"DirectoryPage_Game query notice for '{game_name}' with tags {tags}: {exc}")
             return []
 
     async def get_stream_playback_token(self, channel_login: str) -> Optional[Dict[str, Any]]:

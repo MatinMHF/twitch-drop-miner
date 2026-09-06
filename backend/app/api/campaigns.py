@@ -36,16 +36,25 @@ async def list_active_campaigns(
         results = []
         for c in raw_campaigns:
             game = c.get("game") or {}
+            gid = str(game.get("id") or "")
+            box_art = game.get("boxArtURL")
+            if box_art:
+                box_art_url = box_art.replace("{width}", "285").replace("{height}", "380")
+            elif gid:
+                box_art_url = f"https://static-cdn.jtvnw.net/ttv-boxart/{gid}-285x380.jpg"
+            else:
+                box_art_url = None
+
             results.append({
                 "id": c.get("id"),
                 "name": c.get("name"),
-                "status": c.get("status"),
+                "status": c.get("status") or "ACTIVE",
                 "start_at": c.get("startAt"),
                 "end_at": c.get("endAt"),
                 "game": {
-                    "id": game.get("id"),
-                    "name": game.get("name"),
-                    "box_art_url": game.get("boxArtURL", "").replace("{width}", "144").replace("{height}", "192") if game.get("boxArtURL") else None,
+                    "id": gid,
+                    "name": game.get("name") or "Twitch Game",
+                    "box_art_url": box_art_url,
                 },
             })
         return results
