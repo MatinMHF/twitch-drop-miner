@@ -18,7 +18,7 @@ class Settings(BaseSettings):
 
     # General App Config
     APP_NAME: str = "Twitch Drop Miner"
-    APP_VERSION: str = "1.0.0"
+    APP_VERSION: str = "3.2.0"
     ENVIRONMENT: str = "production"
     DEBUG: bool = False
     HOST: str = "0.0.0.0"
@@ -34,8 +34,8 @@ class Settings(BaseSettings):
     SECRET_KEY: str = os.getenv("SECRET_KEY", "")
     ENCRYPTION_KEY: str = os.getenv("ENCRYPTION_KEY", "")
     CSRF_SECRET: str = os.getenv("CSRF_SECRET", "")
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
-    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 30
     REQUIRE_HTTPS: bool = os.getenv("REQUIRE_HTTPS", "false").lower() in ("true", "1", "yes")
 
     # Rate Limiting
