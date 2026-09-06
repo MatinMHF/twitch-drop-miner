@@ -53,9 +53,7 @@ class MiningWorker:
         active_targets_list: List[Dict[str, Any]] = []
 
         for cid, target in self.active_targets.items():
-            watcher = self.stream_watchers.get(cid)
-            watched_in_session = watcher.minutes_watched_in_session if watcher else 0
-            cur_min = target.get("current_minutes", 0) + watched_in_session
+            cur_min = target.get("current_minutes", 0)
             req_min = target.get("required_minutes", 0)
             progress_pct = min(round((cur_min / req_min) * 100, 2), 100.0) if req_min > 0 else 0.0
 

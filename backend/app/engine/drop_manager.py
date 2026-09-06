@@ -171,34 +171,8 @@ class DropManager:
                         )
                         if len(targets) >= max_concurrent:
                             return targets
-
-            # If no explicit GQL drop target was matched yet, but the watchlisted game is live on Twitch with DropsEnabled,
-            # mine the game's top live stream directly according to priority order.
-            if len(targets) < max_concurrent:
-                live_streams = await self.gql_client.get_live_streams_for_game(game_name, limit=10)
-                if live_streams:
-                    target_channel = live_streams[0]
-                    camp_key = f"live-drops-{game_id}"
-                    if camp_key not in selected_campaign_ids:
-                        selected_campaign_ids.add(camp_key)
-                        targets.append({
-                            "game_id": game_id,
-                            "game_name": game_name,
-                            "campaign_id": camp_key,
-                            "campaign_name": f"{game_name} Drops",
-                            "drop_id": f"drop-{game_id}",
-                            "drop_instance_id": f"drop-{game_id}",
-                            "drop_name": f"{game_name} Drops Event",
-                            "required_minutes": 60,
-                            "current_minutes": 0,
-                            "progress_percent": 0.0,
-                            "channel": target_channel,
-                        })
-                        logger.info(
-                            f"Priority #{len(targets)} Target: '{game_name} Drops' on @{target_channel['channel_login']} (Live Priority Stream Mining)"
-                        )
-                        if len(targets) >= max_concurrent:
-                            return targets
+                    else:
+                        logger.info(f"No eligible live drop streams found for game '{search_name}'.")
 
         return targets
 
