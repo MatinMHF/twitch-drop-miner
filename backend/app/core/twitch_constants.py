@@ -10,12 +10,13 @@ import os
 from typing import Dict, Any
 
 # --- Official & Standard Public Twitch Client IDs ---
-# Twitch Web Client ID (standard for GQL queries)
-DEFAULT_TWITCH_WEB_CLIENT_ID: str = "kimne78kx3ncx6brgo4mv6wki5h1ko"
-# Twitch TV / Console Client ID (supports standard OAuth 2.0 Device Flow without secret)
+# Twitch Android App Client ID (bypasses browser integrity checks for full drop campaigns)
+DEFAULT_TWITCH_WEB_CLIENT_ID: str = "kd1unb4b3q4t58fwlpcbzcbnm76a8fp"
+DEFAULT_TWITCH_USER_AGENT: str = "Dalvik/2.1.0 (Linux; U; Android 16; SM-S911B Build/TP1A.220624.014) tv.twitch.android.app/25.3.0/2503006"
 DEFAULT_TWITCH_DEVICE_CLIENT_ID: str = "kd1unb4b3q4t58fwlpcbzcbnm76a8fp"
 
 TWITCH_WEB_CLIENT_ID: str = os.getenv("TWITCH_WEB_CLIENT_ID", DEFAULT_TWITCH_WEB_CLIENT_ID)
+TWITCH_USER_AGENT: str = os.getenv("TWITCH_USER_AGENT", DEFAULT_TWITCH_USER_AGENT)
 TWITCH_DEVICE_CLIENT_ID: str = os.getenv("TWITCH_DEVICE_CLIENT_ID", DEFAULT_TWITCH_DEVICE_CLIENT_ID)
 
 # --- Endpoints ---
@@ -26,7 +27,7 @@ TWITCH_OAUTH_VALIDATE_URL: str = os.getenv("TWITCH_OAUTH_VALIDATE_URL", "https:/
 TWITCH_OAUTH_REVOKE_URL: str = os.getenv("TWITCH_OAUTH_REVOKE_URL", "https://id.twitch.tv/oauth2/revoke")
 
 # Spade Analytics / Minute-Watched Tracker Endpoints
-DEFAULT_TWITCH_SPADE_URL: str = "https://spade.twitch.tv/"
+DEFAULT_TWITCH_SPADE_URL: str = "https://spade.twitch.tv/track"
 TWITCH_SPADE_URL: str = os.getenv("TWITCH_SPADE_URL", DEFAULT_TWITCH_SPADE_URL)
 
 
@@ -44,7 +45,7 @@ PERSISTED_QUERY_HASHES: Dict[str, str] = {
     ),
     "ViewerDropsDashboard": os.getenv(
         "TWITCH_HASH_VIEWER_DROPS_DASHBOARD",
-        "d9cae7761dafab85908c85e6683cb4201b449e66ac3bb5e894f15ff12aeafaa7",
+        "5a4da2ab3d5b47c9f9ce864e727b2cb346af1e3ea8b897fe8f704a97ff017619",
     ),
     "DropsPage_ClaimDropRewards": os.getenv(
         "TWITCH_HASH_CLAIM_DROP",
@@ -60,12 +61,16 @@ PERSISTED_QUERY_HASHES: Dict[str, str] = {
     ),
     "Inventory": os.getenv(
         "TWITCH_HASH_INVENTORY",
-        "8337eb8541b314040b0edde0c09c5c7a2783ba1960aa9edfbf3bac16d0fec404",
+        "d86775d0ef16a63a33ad52e80eaff963b2d5b72fada7c991504a57496e1d8e4b",
+    ),
+    "DropCurrentSessionContext": os.getenv(
+        "TWITCH_HASH_CURRENT_DROP",
+        "4d06b702d25d652afb9ef835d2a550031f1cf762b193523a92166f40ea3d142b",
     ),
     # Directory & Channels
     "DirectoryPage_Game": os.getenv(
         "TWITCH_HASH_DIRECTORY_GAME",
-        "86bcceb4e8b1a51256ff8eed8bd8aae4acacf80d737efe904f84f3aeadf8cafd",
+        "cb5dc816e139dcb8a118f14b4b677d59abc224a4b016c4bc2bb00a47fe0ddec4",
     ),
     "DirectoryGameRedirect": os.getenv(
         "TWITCH_HASH_DIRECTORY_GAME_REDIRECT",

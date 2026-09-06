@@ -21,7 +21,7 @@ class DropManager:
     def __init__(self, oauth_token: str, twitch_user_id: str):
         self.oauth_token = oauth_token
         self.twitch_user_id = twitch_user_id
-        self.gql_client = TwitchGQLClient(oauth_token=oauth_token)
+        self.gql_client = TwitchGQLClient(oauth_token=oauth_token, twitch_user_id=twitch_user_id)
 
     async def close(self) -> None:
         await self.gql_client.close()
@@ -35,7 +35,20 @@ class DropManager:
 
         for c in all_campaigns:
             game = c.get("game") or {}
-            c_game_name = (game.get("name") or "").strip().lower()
+            c_name_lower = (c.get("name") or "").lower()
+
+            # If game node is missing in dashboard summary (common for special campaigns like Season Meltdown Weekends),
+            # check details or match by keywords
+            if not game.get("id"):
+                try:
+                    det = await self.gql_client.get_campaign_details(c["id"])
+                    if det and det.get("game"):
+                        game = det["game"]
+                        c["game"] = game
+                except Exception:
+                    pass
+
+            c_game_name = (game.get("displayName") or game.get("name") or "").strip().lower()
             c_game_slug = (game.get("slug") or "").strip().lower()
             c_game_id = str(game.get("id") or "").strip()
 
@@ -47,7 +60,9 @@ class DropManager:
                 or g_name_lower in c_game_name
                 or c_game_name in g_name_lower
                 or g_name_lower in c_game_slug
+                or c_game_slug in g_name_lower
                 or g_name_lower.replace(" ", "") in c_game_name.replace(" ", "")
+                or g_name_lower.replace(" ", "-") in c_game_slug
             ):
                 is_match = True
 
@@ -126,9 +141,11 @@ class DropManager:
                         }
 
                 if target_drop:
-                    search_name = campaign.get("game", {}).get("name") or game_name
+                    camp_game = details.get("game") or campaign.get("game") or {}
+                    search_name = camp_game.get("displayName") or camp_game.get("name") or game_name
                     # Check if this campaign has specific allowed channels
-                    allow_channels = details.get("allow", {}).get("channels") or campaign.get("allow", {}).get("channels")
+                    allow = details.get("allow") or campaign.get("allow") or {}
+                    allow_channels = allow.get("channels") if isinstance(allow, dict) else None
                     allowed_logins = None
                     allowed_ids = None
                     if allow_channels and isinstance(allow_channels, list):

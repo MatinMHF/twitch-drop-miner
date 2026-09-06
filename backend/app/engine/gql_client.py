@@ -11,6 +11,7 @@ from app.core.logging import logger
 from app.core.twitch_constants import (
     TWITCH_GQL_URL,
     TWITCH_WEB_CLIENT_ID,
+    TWITCH_USER_AGENT,
     build_gql_persisted_query,
 )
 
@@ -18,16 +19,22 @@ from app.core.twitch_constants import (
 class TwitchGQLClient:
     """High-performance async Twitch GraphQL Client."""
 
-    def __init__(self, oauth_token: Optional[str] = None, client_id: Optional[str] = None):
+    def __init__(
+        self,
+        oauth_token: Optional[str] = None,
+        client_id: Optional[str] = None,
+        twitch_user_id: Optional[str] = None,
+    ):
         self.client_id = client_id or TWITCH_WEB_CLIENT_ID
         self.oauth_token = oauth_token
+        self.twitch_user_id = twitch_user_id
         self._http_client: Optional[httpx.AsyncClient] = None
 
     async def _get_client(self) -> httpx.AsyncClient:
         if self._http_client is None or self._http_client.is_closed:
             headers = {
                 "Client-Id": self.client_id,
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+                "User-Agent": TWITCH_USER_AGENT,
                 "Accept-Language": "en-US",
                 "Content-Type": "application/json",
             }
@@ -211,11 +218,25 @@ class TwitchGQLClient:
         return items[:limit]
 
     async def get_available_drop_campaigns(self, extra_games: Optional[List[str]] = None) -> List[Dict[str, Any]]:
-        """Fetch all active and upcoming Drop campaigns from Inventory and stream discovery."""
+        """Fetch all active and upcoming Drop campaigns across Twitch and merge with user Inventory."""
         campaigns_by_id: Dict[str, Dict[str, Any]] = {}
         variables = {"fetchRewardCampaigns": False}
 
-        # 1. Primary: Fetch from user Inventory (contains active in-progress campaigns with full details)
+        # 1. Primary: Fetch all campaigns from ViewerDropsDashboard (returns all active/upcoming campaigns)
+        try:
+            dash_data = await self.execute_query("ViewerDropsDashboard", variables)
+            dash_user = dash_data.get("currentUser", {}) or {}
+            dash_camps = dash_user.get("dropCampaigns", []) or []
+            for c in dash_camps:
+                if c and isinstance(c, dict) and "id" in c:
+                    cid = c["id"]
+                    status = c.get("status")
+                    if status in ("ACTIVE", "UPCOMING"):
+                        campaigns_by_id[cid] = c
+        except Exception as exc:
+            logger.debug(f"ViewerDropsDashboard query error: {exc}")
+
+        # 2. Secondary: Merge from user Inventory (in-progress campaigns with progress)
         try:
             inv_data = await self.execute_query("Inventory", variables)
             user_inv = inv_data.get("currentUser", {}) or {}
@@ -223,25 +244,13 @@ class TwitchGQLClient:
             in_prog = inv_node.get("dropCampaignsInProgress", []) or []
             for c in in_prog:
                 if c and isinstance(c, dict) and "id" in c:
-                    campaigns_by_id[c["id"]] = c
+                    cid = c["id"]
+                    if cid in campaigns_by_id:
+                        campaigns_by_id[cid].update(c)
+                    else:
+                        campaigns_by_id[cid] = c
         except Exception as exc:
-            logger.debug(f"Failed to fetch campaigns from Inventory: {exc}")
-
-        # 2. Secondary: Discover active drop campaigns directly from live streams of watchlist games
-        if extra_games:
-            for game_name in extra_games:
-                try:
-                    streams = await self.get_live_streams_for_game(game_name, limit=3)
-                    for s in streams:
-                        cid = s.get("channel_id")
-                        if not cid:
-                            continue
-                        channel_camps = await self.get_channel_drop_campaigns(cid)
-                        for cc in channel_camps:
-                            if cc.get("id") and cc["id"] not in campaigns_by_id:
-                                campaigns_by_id[cc["id"]] = cc
-                except Exception as exc:
-                    logger.debug(f"Stream-based campaign discovery error for '{game_name}': {exc}")
+            logger.debug(f"Inventory query error: {exc}")
 
         return list(campaigns_by_id.values())
 
@@ -258,19 +267,9 @@ class TwitchGQLClient:
 
     async def get_campaign_details(self, campaign_id: str) -> Optional[Dict[str, Any]]:
         """Fetch detailed drop rules and progress for a specific campaign."""
-        # 1. Check known campaigns first
-        try:
-            campaigns = await self.get_available_drop_campaigns()
-            for c in campaigns:
-                if c.get("id") == campaign_id:
-                    return c
-        except Exception:
-            pass
-
-        # 2. Query DropCampaignDetails if needed
         variables = {
             "dropID": campaign_id,
-            "channelLogin": "",
+            "channelLogin": str(self.twitch_user_id or ""),
         }
         try:
             data = await self.execute_query("DropCampaignDetails", variables)
@@ -280,6 +279,89 @@ class TwitchGQLClient:
         except Exception as exc:
             logger.debug(f"Failed to fetch campaign details for {campaign_id}: {exc}")
         return None
+
+    async def get_stream_info(self, channel_login: str) -> Optional[Dict[str, Any]]:
+        """Fetch live stream metadata (stream ID, channel ID, game ID/name) via VideoPlayerStreamInfoOverlayChannel."""
+        try:
+            data = await self.execute_query(
+                "VideoPlayerStreamInfoOverlayChannel",
+                {"channel": channel_login.lower().strip()}
+            )
+            user = data.get("user") or {}
+            stream = user.get("stream")
+            broadcast = user.get("broadcastSettings") or {}
+            if stream and stream.get("id"):
+                game = broadcast.get("game") or {}
+                return {
+                    "is_live": True,
+                    "stream_id": str(stream["id"]),
+                    "channel_id": str(broadcast.get("id") or user.get("id") or ""),
+                    "channel_login": channel_login,
+                    "viewers_count": stream.get("viewersCount", 0),
+                    "game_id": str(game.get("id") or ""),
+                    "game_name": game.get("name") or game.get("displayName") or "",
+                    "title": broadcast.get("title", ""),
+                }
+        except Exception as exc:
+            logger.debug(f"Failed to fetch stream info for {channel_login}: {exc}")
+        return None
+
+    async def send_spade_minute_watched(
+        self,
+        channel_id: str,
+        channel_login: str,
+        broadcast_id: str,
+        game_name: str,
+        game_id: str = "",
+        user_id: Optional[str] = None,
+    ) -> bool:
+        """Send standard minute-watched telemetry heartbeat via Twitch GraphQL sendSpadeEvents mutation."""
+        from datetime import datetime, timezone
+        import gzip
+        import base64
+        payload = [
+            {
+                "event": "minute-watched",
+                "properties": {
+                    "broadcast_id": str(broadcast_id),
+                    "channel_id": str(channel_id),
+                    "channel": channel_login.lower(),
+                    "client_time": datetime.now(timezone.utc).isoformat(),
+                    "game": game_name or "",
+                    "game_id": str(game_id or ""),
+                    "hidden": False,
+                    "is_live": True,
+                    "live": True,
+                    "logged_in": True,
+                    "minutes_logged": 1,
+                    "muted": False,
+                    "user_id": int(user_id) if user_id and str(user_id).isdigit() else 0,
+                }
+            }
+        ]
+        compressed = gzip.compress(json.dumps(payload, separators=(',', ':')).encode("utf-8"))
+        g64data = base64.b64encode(compressed).decode("utf-8")
+        gql_doc = (
+            "\n mutation SendEvents($input: SendSpadeEventsInput!) {\n"
+            " sendSpadeEvents(input: $input) {\n"
+            " statusCode\n"
+            "}\n}\n"
+        )
+        try:
+            data = await self.execute_raw_query(
+                gql_doc,
+                {
+                    "input": {
+                        "data": g64data,
+                        "repository": "twilight",
+                        "encoding": "GZIP_B64",
+                    }
+                }
+            )
+            return data.get("sendSpadeEvents", {}).get("statusCode") == 204
+        except Exception as exc:
+            logger.debug(f"send_spade_minute_watched error: {exc}")
+            return False
 
     async def get_inventory_drops(self) -> Dict[str, Any]:
         """Fetch current user's drop inventory progress and claimable drops."""

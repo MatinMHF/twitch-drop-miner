@@ -37,12 +37,13 @@ class StreamWatcher:
         self.on_channel_offline = on_channel_offline
         self.on_minute_heartbeat = on_minute_heartbeat
 
-        self._gql_client = TwitchGQLClient(oauth_token=oauth_token)
+        self._gql_client = TwitchGQLClient(oauth_token=oauth_token, twitch_user_id=twitch_user_id)
         self._spade_tracker = SpadeTracker(oauth_token=oauth_token)
         self._is_running = False
         self._task: Optional[asyncio.Task] = None
         self.minutes_watched_in_session = 0
         self.last_heartbeat_at: Optional[datetime] = None
+        self.game_id: Optional[str] = None
 
     async def start(self) -> None:
         """Start the async heartbeat loop for this channel."""
@@ -82,6 +83,22 @@ class StreamWatcher:
         playback_token: Optional[Dict[str, Any]] = None
         consecutive_failures = 0
 
+        # Fetch verified live stream info (broadcast_id, channel_id, game_id)
+        try:
+            stream_info = await self._gql_client.get_stream_info(self.channel_login)
+            if stream_info:
+                self.stream_id = stream_info.get("stream_id") or self.stream_id
+                self.channel_id = stream_info.get("channel_id") or self.channel_id
+                self.game_id = stream_info.get("game_id")
+                if stream_info.get("game_name"):
+                    self.game_name = stream_info["game_name"]
+                logger.info(
+                    f"Verified @{self.channel_login}: broadcast_id={self.stream_id}, "
+                    f"channel_id={self.channel_id}, game='{self.game_name}' ({self.game_id})"
+                )
+        except Exception as exc:
+            logger.debug(f"Initial stream info fetch notice for @{self.channel_login}: {exc}")
+
         try:
             while self._is_running:
                 try:
@@ -100,15 +117,13 @@ class StreamWatcher:
                         try:
                             usher_res = await http_client.get(usher_url)
                             if usher_res.status_code == 200:
-                                # Fetch variant media playlist (audio/low) to confirm playback session with Edge cluster
                                 lines = usher_res.text.splitlines()
                                 variant_urls = [line.strip() for line in lines if line.strip().startswith("http")]
                                 if variant_urls:
-                                    var_url = variant_urls[-1]  # audio_only or lowest segment list
+                                    var_url = variant_urls[-1]
                                     var_res = await http_client.get(var_url)
                                     if var_res.status_code == 200:
                                         var_lines = var_res.text.splitlines()
-                                        # Ping trigger URL if present in manifest
                                         for vl in var_lines:
                                             if 'X-TV-TWITCH-TRIGGER-URL="' in vl:
                                                 try:
@@ -116,7 +131,6 @@ class StreamWatcher:
                                                     await http_client.get(trig_url)
                                                 except Exception:
                                                     pass
-                                        # Fetch tiny 2KB header of latest audio segment to register genuine active buffer
                                         seg_urls = [
                                             vl.strip() for vl in var_lines 
                                             if vl.strip().startswith("http") or (not vl.strip().startswith("#") and vl.strip().endswith(".ts"))
@@ -130,7 +144,7 @@ class StreamWatcher:
                         except Exception as exc:
                             logger.debug(f"Usher/Variant stream ping notice for @{self.channel_login}: {exc}")
 
-                    # 3. Dispatch Spade minute-watched telemetry heartbeat with game metadata
+                    # 3. Dispatch Spade minute-watched telemetry heartbeat with verified stream and game metadata
                     try:
                         await self._spade_tracker.send_heartbeat(
                             channel_id=self.channel_id,
@@ -138,6 +152,7 @@ class StreamWatcher:
                             broadcast_id=self.stream_id,
                             user_id=self.twitch_user_id,
                             game_name=self.game_name,
+                            game_id=self.game_id,
                         )
                     except Exception as exc:
                         logger.debug(f"Spade heartbeat notice: {exc}")
@@ -146,7 +161,6 @@ class StreamWatcher:
                     consecutive_failures = 0
                     self.minutes_watched_in_session += 1
                     self.last_heartbeat_at = datetime.now(timezone.utc)
-                    logger.debug(f"Stream watch minute heartbeat completed for @{self.channel_login} (session: {self.minutes_watched_in_session}m)")
 
                     if self.on_minute_heartbeat:
                         try:
@@ -154,8 +168,8 @@ class StreamWatcher:
                         except Exception as exc:
                             logger.error(f"Error in on_minute_heartbeat callback: {exc}")
 
-                    # Every 5 minutes, verify channel is still broadcasting
-                    if self.minutes_watched_in_session % 5 == 0:
+                    # Every 3 minutes, verify channel is still broadcasting
+                    if self.minutes_watched_in_session % 3 == 0:
                         is_live = await self._verify_channel_live()
                         if not is_live:
                             logger.warning(f"Channel '{self.channel_login}' went offline! Triggering failover.")
@@ -180,12 +194,12 @@ class StreamWatcher:
             await http_client.aclose()
 
     async def _verify_channel_live(self) -> bool:
-        """Check if streamer is still live."""
+        """Check if streamer is still live using official VideoPlayerStreamInfoOverlayChannel."""
         try:
-            streams = await self._gql_client.get_live_streams_for_game(self.game_name, limit=50)
-            for s in streams:
-                if s["channel_login"].lower() == self.channel_login.lower():
-                    return True
+            info = await self._gql_client.get_stream_info(self.channel_login)
+            if info and info.get("is_live"):
+                self.stream_id = info.get("stream_id") or self.stream_id
+                return True
             return False
         except Exception:
-            return True  # Avoid false failovers on network blips
+            return True

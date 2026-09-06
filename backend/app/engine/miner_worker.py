@@ -312,7 +312,27 @@ class MiningWorker:
         target = self.active_targets.get(campaign_id)
 
         if target:
-            cur = target.get("current_minutes", 0) + minutes_in_session
+            # Periodically query verified drop progress from Twitch
+            if self.drop_manager and minutes_in_session % 2 == 0:
+                try:
+                    ch_id = target.get("channel", {}).get("channel_id")
+                    if ch_id:
+                        ctx = await self.drop_manager.gql_client.execute_query(
+                            "DropCurrentSessionContext",
+                            {"channelID": str(ch_id), "channelLogin": ""}
+                        )
+                        drop_data = (ctx.get("currentUser") or {}).get("dropCurrentSession")
+                        if drop_data and drop_data.get("dropID") == target.get("drop_id"):
+                            cur_mins = drop_data.get("currentMinutesWatched")
+                            if cur_mins is not None:
+                                target["current_minutes"] = cur_mins
+                                req = drop_data.get("requiredMinutesWatched") or target.get("required_minutes", 1)
+                                target["required_minutes"] = req
+                                target["progress_percent"] = round((cur_mins / max(req, 1)) * 100, 1)
+                except Exception:
+                    pass
+
+            cur = target.get("current_minutes", 0)
             req = target.get("required_minutes", 0)
 
             # Check if reached 100%
