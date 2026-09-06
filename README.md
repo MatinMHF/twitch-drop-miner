@@ -110,6 +110,31 @@ On first launch, follow the initial setup wizard to create your admin username a
 
 ---
 
+## 🔄 Updating to the Latest Version
+
+To update an existing installation without losing your settings, database, or tokens:
+
+### Quick Update Script
+```bash
+# Linux / macOS
+chmod +x update.sh
+./update.sh
+```
+
+```cmd
+:: Windows
+update.bat
+```
+
+### Manual Command:
+```bash
+git pull
+docker compose pull
+docker compose up -d --build
+```
+
+---
+
 ## ⚙️ Configuration & Constants
 
 All Twitch GraphQL Persisted Query Hashes and endpoints are centralized in `backend/app/core/twitch_constants.py`. When Twitch modifies their GQL schema, you can hotfix hashes directly in `.env` without altering code:
@@ -122,9 +147,12 @@ All Twitch GraphQL Persisted Query Hashes and endpoints are centralized in `back
 | `POLL_INTERVAL_MINUTES` | `30` | Interval to poll Twitch for new drop campaigns |
 | `WATCH_HEARTBEAT_SECONDS` | `60` | Stream watch heartbeat interval |
 | `TWITCH_SPADE_URL` | `https://spade.twitch.tv/batched` | Twitch analytics minute-watched endpoint |
-| `TWITCH_HASH_DROP_CAMPAIGN_DETAILS` | `14b5532...` | SHA-256 hash for campaign details GQL query |
-| `TWITCH_HASH_AVAILABLE_DROPS` | `b194971...` | SHA-256 hash for available drops GQL query |
-| `TWITCH_HASH_CLAIM_DROP` | `2f813d6...` | SHA-256 hash for drop claiming GQL mutation |
+| `TWITCH_HASH_DROP_CAMPAIGN_DETAILS` | `039277b...` | SHA-256 hash for campaign details GQL query |
+| `TWITCH_HASH_AVAILABLE_DROPS` | `782dad0...` | SHA-256 hash for available drops GQL query |
+| `TWITCH_HASH_VIEWER_DROPS_DASHBOARD` | `d9cae77...` | SHA-256 hash for drop inventory / dashboard query |
+| `TWITCH_HASH_CLAIM_DROP` | `a455dee...` | SHA-256 hash for drop claiming GQL mutation |
+| `TWITCH_HASH_DIRECTORY_GAME` | `86bcceb...` | SHA-256 hash for game directory channel list query |
+| `TWITCH_HASH_PLAYBACK_ACCESS_TOKEN` | `ed230aa...` | SHA-256 hash for stream playback access token query |
 
 ---
 

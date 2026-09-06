@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-09-06
+
+### Fixed
+- **Twitch GraphQL Persisted Query Hashes**:
+  - Updated `DropsHighlightService_AvailableDrops`, `DropCampaignDetails`, `ViewerDropsDashboard`, `DirectoryPage_Game`, `ClaimDropMutation`, `PlaybackAccessToken_Template`, `VideoPlayerStreamInfoOverlayChannel`, and `DirectoryGameRedirect` hashes to verified working versions to resolve `PersistedQueryNotFound` errors.
+  - Enhanced `search_games` in GraphQL client with resilient multi-tier lookup (active campaigns filter and `DirectoryGameRedirect`).
+- **Container Volume Permissions**:
+  - Fixed `PermissionError: [Errno 13] Permission denied: '/app/data/.master_secrets'` by introducing root permission bootstrapping in `docker/entrypoint.sh` with safe unprivileged execution via `gosu appuser`.
+- **Frontend TypeScript Build**:
+  - Removed unused imports and variables across all React components to achieve 100% clean `tsc && vite build`.
+
+### Added
+- **Update Workflow Scripts**:
+  - Added `update.sh` (Linux/macOS) and `update.bat` (Windows) for seamless in-place updating without data loss.
+  - Added comprehensive `Updating` and `Uninstallation` sections to `README.md`.
+
 ## [1.0.0] - 2026-09-06
 
 ### Added

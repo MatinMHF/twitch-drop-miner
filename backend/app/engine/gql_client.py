@@ -71,30 +71,53 @@ class TwitchGQLClient:
     # --- Query Implementations ---
 
     async def search_games(self, query: str, limit: int = 15) -> List[Dict[str, Any]]:
-        """Search Twitch games directory by name."""
-        variables = {
-            "query": query,
-            "options": {
-                "targets": ["GAME"],
-                "limit": limit,
-            },
-        }
+        """Search Twitch games directory by name using DirectoryGameRedirect and active campaigns."""
+        items: List[Dict[str, Any]] = []
+        seen_ids = set()
+
+        q_lower = query.strip().lower()
+
+        # 1. Search against active drop campaigns
         try:
-            data = await self.execute_query("SearchFor", variables)
-            items = []
-            search_data = data.get("searchFor", {})
-            for edge in search_data.get("games", {}).get("edges", []):
-                node = edge.get("node", {})
-                if node:
+            campaigns = await self.get_available_drop_campaigns()
+            for c in campaigns:
+                g = c.get("game") or {}
+                gid = g.get("id")
+                gname = g.get("name", "")
+                if gid and gname and q_lower in gname.lower() and gid not in seen_ids:
+                    seen_ids.add(gid)
+                    box = g.get("boxArtURL", "")
+                    if box:
+                        box = box.replace("{width}", "285").replace("{height}", "380")
                     items.append({
-                        "id": node.get("id"),
-                        "name": node.get("name"),
-                        "box_art_url": node.get("boxArtURL", "").replace("{width}", "285").replace("{height}", "380") if node.get("boxArtURL") else None,
+                        "id": str(gid),
+                        "name": gname,
+                        "box_art_url": box or None,
                     })
-            return items
         except Exception as exc:
-            logger.warning(f"Error searching games for '{query}': {exc}")
-            return []
+            logger.debug(f"Campaign search filter error: {exc}")
+
+        # 2. Query DirectoryGameRedirect for exact or specific game lookup
+        try:
+            data = await self.execute_query("DirectoryGameRedirect", {"name": query.strip()})
+            game_node = data.get("game")
+            if game_node:
+                gid = str(game_node.get("id"))
+                gname = game_node.get("displayName") or game_node.get("name") or query.strip()
+                if gid and gid not in seen_ids:
+                    seen_ids.add(gid)
+                    box = game_node.get("boxArtURL", "")
+                    if box:
+                        box = box.replace("{width}", "285").replace("{height}", "380")
+                    items.insert(0, {
+                        "id": gid,
+                        "name": gname,
+                        "box_art_url": box or None,
+                    })
+        except Exception as exc:
+            logger.debug(f"DirectoryGameRedirect query error: {exc}")
+
+        return items[:limit]
 
     async def get_available_drop_campaigns(self) -> List[Dict[str, Any]]:
         """Fetch all active and upcoming Drop campaigns."""

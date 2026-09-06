@@ -63,9 +63,13 @@ PERSISTED_QUERY_HASHES: Dict[str, str] = {
         "TWITCH_HASH_DIRECTORY_ROOT",
         "76192cfba9e1bf0fb4440078b17c5b61b24d7cb0efb32e14bc2bc3b6cbbe1d72",
     ),
+    "DirectoryGameRedirect": os.getenv(
+        "TWITCH_HASH_DIRECTORY_GAME_REDIRECT",
+        "1f0300090caceec51f33c5e20647aceff9017f740f223c3c532ba6fa59f6b6cc",
+    ),
     "SearchFor": os.getenv(
         "TWITCH_HASH_SEARCH_FOR",
-        "d5db530d363e0f968529367c9ad50a7c64c7ef21ea6e54ee00e7ff2b3cb1c9ef",
+        "1f0300090caceec51f33c5e20647aceff9017f740f223c3c532ba6fa59f6b6cc",
     ),
     "ChannelShell": os.getenv(
         "TWITCH_HASH_CHANNEL_SHELL",
