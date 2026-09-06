@@ -104,17 +104,40 @@ class StreamWatcher:
                                 lines = usher_res.text.splitlines()
                                 variant_urls = [line.strip() for line in lines if line.strip().startswith("http")]
                                 if variant_urls:
-                                    await http_client.get(variant_urls[-1])  # audio_only or lowest segment list
+                                    var_url = variant_urls[-1]  # audio_only or lowest segment list
+                                    var_res = await http_client.get(var_url)
+                                    if var_res.status_code == 200:
+                                        var_lines = var_res.text.splitlines()
+                                        # Ping trigger URL if present in manifest
+                                        for vl in var_lines:
+                                            if 'X-TV-TWITCH-TRIGGER-URL="' in vl:
+                                                try:
+                                                    trig_url = vl.split('X-TV-TWITCH-TRIGGER-URL="')[1].split('"')[0]
+                                                    await http_client.get(trig_url)
+                                                except Exception:
+                                                    pass
+                                        # Fetch tiny 2KB header of latest audio segment to register genuine active buffer
+                                        seg_urls = [
+                                            vl.strip() for vl in var_lines 
+                                            if vl.strip().startswith("http") or (not vl.strip().startswith("#") and vl.strip().endswith(".ts"))
+                                        ]
+                                        if seg_urls:
+                                            latest_seg = seg_urls[0]
+                                            if not latest_seg.startswith("http"):
+                                                base = var_url.rsplit("/", 1)[0]
+                                                latest_seg = f"{base}/{latest_seg}"
+                                            await http_client.get(latest_seg, headers={"Range": "bytes=0-2048"})
                         except Exception as exc:
                             logger.debug(f"Usher/Variant stream ping notice for @{self.channel_login}: {exc}")
 
-                    # 3. Dispatch Spade minute-watched telemetry heartbeat
+                    # 3. Dispatch Spade minute-watched telemetry heartbeat with game metadata
                     try:
                         await self._spade_tracker.send_heartbeat(
                             channel_id=self.channel_id,
                             channel_login=self.channel_login,
                             broadcast_id=self.stream_id,
                             user_id=self.twitch_user_id,
+                            game_name=self.game_name,
                         )
                     except Exception as exc:
                         logger.debug(f"Spade heartbeat notice: {exc}")

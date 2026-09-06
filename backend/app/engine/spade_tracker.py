@@ -52,6 +52,7 @@ class SpadeTracker:
         channel_login: str,
         broadcast_id: Optional[str] = None,
         user_id: Optional[str] = None,
+        game_name: Optional[str] = None,
     ) -> str:
         """Create standard base64-encoded Twitch minute-watched payload."""
         timestamp = int(time.time())
@@ -65,9 +66,11 @@ class SpadeTracker:
                 "live": True,
                 "time": timestamp,
                 "channel": channel_login,
+                "game": game_name or "",
                 "hidden": False,
                 "muted": False,
-            }
+                "client_time": timestamp,
+            },
         }
         encoded_data = base64.b64encode(json.dumps([event]).encode("utf-8")).decode("utf-8")
         return f"data={encoded_data}"
@@ -78,6 +81,7 @@ class SpadeTracker:
         channel_login: str,
         broadcast_id: Optional[str] = None,
         user_id: Optional[str] = None,
+        game_name: Optional[str] = None,
     ) -> bool:
         """Send a single minute-watched heartbeat to Twitch telemetry."""
         try:
@@ -87,6 +91,7 @@ class SpadeTracker:
                 channel_login=channel_login,
                 broadcast_id=broadcast_id,
                 user_id=user_id,
+                game_name=game_name,
             )
             response = await client.post(
                 TWITCH_SPADE_URL,
@@ -94,7 +99,7 @@ class SpadeTracker:
                 headers={"Content-Type": "application/x-www-form-urlencoded"},
             )
             if response.status_code in (200, 204):
-                logger.debug(f"Spade heartbeat sent successfully for channel {channel_login}")
+                logger.debug(f"Spade heartbeat sent successfully for channel {channel_login} ({game_name})")
                 return True
             logger.warning(f"Spade response code: {response.status_code}")
             return True
