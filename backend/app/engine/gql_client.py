@@ -210,8 +210,8 @@ class TwitchGQLClient:
         items.sort(key=rank_score)
         return items[:limit]
 
-    async def get_available_drop_campaigns(self) -> List[Dict[str, Any]]:
-        """Fetch all active and upcoming Drop campaigns from Inventory and Dashboard."""
+    async def get_available_drop_campaigns(self, extra_games: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+        """Fetch all active and upcoming Drop campaigns from Inventory and stream discovery."""
         campaigns_by_id: Dict[str, Dict[str, Any]] = {}
         variables = {"fetchRewardCampaigns": False}
 
@@ -227,23 +227,34 @@ class TwitchGQLClient:
         except Exception as exc:
             logger.debug(f"Failed to fetch campaigns from Inventory: {exc}")
 
-        # 2. Secondary: Fetch from ViewerDropsDashboard
-        try:
-            dash_data = await self.execute_query("ViewerDropsDashboard", variables)
-            user_dash = dash_data.get("currentUser", {}) or dash_data.get("user", {}) or {}
-            dash_campaigns = (
-                user_dash.get("dropCampaigns", [])
-                or user_dash.get("dropCampaignsInProgress", [])
-                or []
-            )
-            for c in dash_campaigns:
-                if c and isinstance(c, dict) and "id" in c:
-                    if c["id"] not in campaigns_by_id:
-                        campaigns_by_id[c["id"]] = c
-        except Exception as exc:
-            logger.debug(f"Failed to fetch campaigns from ViewerDropsDashboard: {exc}")
+        # 2. Secondary: Discover active drop campaigns directly from live streams of watchlist games
+        if extra_games:
+            for game_name in extra_games:
+                try:
+                    streams = await self.get_live_streams_for_game(game_name, limit=3)
+                    for s in streams:
+                        cid = s.get("channel_id")
+                        if not cid:
+                            continue
+                        channel_camps = await self.get_channel_drop_campaigns(cid)
+                        for cc in channel_camps:
+                            if cc.get("id") and cc["id"] not in campaigns_by_id:
+                                campaigns_by_id[cc["id"]] = cc
+                except Exception as exc:
+                    logger.debug(f"Stream-based campaign discovery error for '{game_name}': {exc}")
 
         return list(campaigns_by_id.values())
+
+    async def get_channel_drop_campaigns(self, channel_id: str) -> List[Dict[str, Any]]:
+        """Fetch active drop campaigns from a channel's DropsHighlightService."""
+        variables = {"channelID": str(channel_id)}
+        try:
+            data = await self.execute_query("DropsHighlightService_AvailableDrops", variables)
+            channel_node = data.get("channel") or {}
+            return channel_node.get("viewerDropCampaigns") or []
+        except Exception as exc:
+            logger.debug(f"Failed to query DropsHighlightService for channel {channel_id}: {exc}")
+            return []
 
     async def get_campaign_details(self, campaign_id: str) -> Optional[Dict[str, Any]]:
         """Fetch detailed drop rules and progress for a specific campaign."""

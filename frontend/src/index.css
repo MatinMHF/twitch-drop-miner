@@ -4,8 +4,171 @@
 
 @layer base {
   body {
-    @apply antialiased transition-colors duration-200;
+    @apply antialiased transition-colors duration-200 bg-slate-950 text-slate-100;
   }
+}
+
+/* Light Theme Overrides (Active when <html> does NOT have .dark) */
+html:not(.dark) body {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+/* Card & Background Overrides for Light Mode */
+html:not(.dark) .bg-slate-950 {
+  background-color: #f8fafc !important;
+}
+
+html:not(.dark) .bg-slate-950\/95,
+html:not(.dark) .bg-slate-950\/90,
+html:not(.dark) .bg-slate-950\/80,
+html:not(.dark) .bg-slate-950\/60 {
+  background-color: rgba(248, 250, 252, 0.95) !important;
+}
+
+html:not(.dark) .bg-slate-900 {
+  background-color: #ffffff !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+}
+
+html:not(.dark) .bg-slate-900\/90,
+html:not(.dark) .bg-slate-900\/80,
+html:not(.dark) .bg-slate-900\/60,
+html:not(.dark) .bg-slate-900\/50,
+html:not(.dark) .bg-slate-900\/40 {
+  background-color: rgba(255, 255, 255, 0.92) !important;
+}
+
+html:not(.dark) .bg-slate-800,
+html:not(.dark) .bg-slate-800\/90,
+html:not(.dark) .bg-slate-800\/80,
+html:not(.dark) .bg-slate-800\/60,
+html:not(.dark) .bg-slate-800\/50,
+html:not(.dark) .bg-slate-800\/40,
+html:not(.dark) .bg-slate-800\/30,
+html:not(.dark) .bg-slate-800\/20 {
+  background-color: #f1f5f9 !important;
+}
+
+/* Hover States in Light Mode */
+html:not(.dark) .hover\:bg-slate-800:hover,
+html:not(.dark) .hover\:bg-slate-800\/80:hover,
+html:not(.dark) .hover\:bg-slate-800\/50:hover,
+html:not(.dark) .hover\:bg-slate-700:hover,
+html:not(.dark) .hover\:bg-slate-700\/50:hover {
+  background-color: #e2e8f0 !important;
+}
+
+/* Border Overrides for Light Mode */
+html:not(.dark) .border-slate-950,
+html:not(.dark) .border-slate-900,
+html:not(.dark) .border-slate-900\/60,
+html:not(.dark) .border-slate-800,
+html:not(.dark) .border-slate-800\/80,
+html:not(.dark) .border-slate-800\/60,
+html:not(.dark) .border-slate-800\/50,
+html:not(.dark) .border-slate-800\/40,
+html:not(.dark) .border-slate-700,
+html:not(.dark) .border-slate-700\/50,
+html:not(.dark) .border-slate-700\/40 {
+  border-color: #e2e8f0 !important;
+}
+
+/* Typography Overrides for Light Mode */
+html:not(.dark) .text-white {
+  color: #0f172a !important;
+}
+
+html:not(.dark) .text-slate-100,
+html:not(.dark) .text-slate-200 {
+  color: #1e293b !important;
+}
+
+html:not(.dark) .text-slate-300 {
+  color: #334155 !important;
+}
+
+html:not(.dark) .text-slate-400 {
+  color: #64748b !important;
+}
+
+html:not(.dark) .text-slate-500 {
+  color: #64748b !important;
+}
+
+html:not(.dark) .text-slate-600 {
+  color: #94a3b8 !important;
+}
+
+/* Input / Form Control Styles for Light Mode */
+html:not(.dark) input,
+html:not(.dark) select,
+html:not(.dark) textarea {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+html:not(.dark) input::placeholder,
+html:not(.dark) textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* Accent Badges in Light Mode */
+html:not(.dark) .bg-purple-950\/50,
+html:not(.dark) .bg-purple-950\/40,
+html:not(.dark) .bg-purple-950\/30 {
+  background-color: #f3e8ff !important;
+  border-color: #d8b4fe !important;
+}
+
+html:not(.dark) .text-purple-300,
+html:not(.dark) .text-purple-400 {
+  color: #7e22ce !important;
+}
+
+html:not(.dark) .bg-emerald-950\/50,
+html:not(.dark) .bg-emerald-950\/40,
+html:not(.dark) .bg-emerald-950\/30 {
+  background-color: #ecfdf5 !important;
+  border-color: #a7f3d0 !important;
+}
+
+html:not(.dark) .text-emerald-300,
+html:not(.dark) .text-emerald-400 {
+  color: #047857 !important;
+}
+
+html:not(.dark) .bg-rose-950\/50,
+html:not(.dark) .bg-rose-950\/40,
+html:not(.dark) .bg-rose-950\/30 {
+  background-color: #fff1f2 !important;
+  border-color: #fecdd3 !important;
+}
+
+html:not(.dark) .text-rose-300,
+html:not(.dark) .text-rose-400 {
+  color: #be123c !important;
+}
+
+html:not(.dark) .bg-amber-950\/50,
+html:not(.dark) .bg-amber-950\/40,
+html:not(.dark) .bg-amber-950\/30 {
+  background-color: #fffbeb !important;
+  border-color: #fde68a !important;
+}
+
+html:not(.dark) .text-amber-300,
+html:not(.dark) .text-amber-400 {
+  color: #b45309 !important;
+}
+
+html:not(.dark) .from-white {
+  --tw-gradient-from: #0f172a var(--tw-gradient-from-position) !important;
+}
+
+html:not(.dark) .via-slate-100 {
+  --tw-gradient-stops: var(--tw-gradient-from), #334155 var(--tw-gradient-via-position), var(--tw-gradient-to) !important;
 }
 
 /* Custom modern scrollbars */
@@ -20,4 +183,11 @@
 
 ::-webkit-scrollbar-thumb {
   @apply bg-slate-700/50 rounded-full hover:bg-slate-600;
+}
+
+html:not(.dark) ::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1 !important;
+}
+html:not(.dark) ::-webkit-scrollbar-thumb:hover {
+  background-color: #94a3b8 !important;
 }

@@ -28,7 +28,7 @@ class DropManager:
 
     async def get_active_campaigns_for_game(self, game_name: str, game_id: Optional[str] = None) -> List[Dict[str, Any]]:
         """Fetch all active campaigns matching a given game name or game ID."""
-        all_campaigns = await self.gql_client.get_available_drop_campaigns()
+        all_campaigns = await self.gql_client.get_available_drop_campaigns(extra_games=[game_name])
         matched = []
         g_name_lower = game_name.strip().lower()
         g_id_str = str(game_id).strip() if game_id else None

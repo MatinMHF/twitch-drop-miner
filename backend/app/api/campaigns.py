@@ -12,6 +12,7 @@ from app.db.repositories import (
     get_active_twitch_account,
     get_claimed_drops,
     get_decrypted_tokens,
+    get_watchlist,
 )
 from app.engine.gql_client import TwitchGQLClient
 from app.schemas.miner import ClaimedDropResponse
@@ -26,13 +27,16 @@ async def list_active_campaigns(
 ) -> List[Dict[str, Any]]:
     """List all currently active drop campaigns on Twitch."""
     account = await get_active_twitch_account(db)
+    watchlist = await get_watchlist(db)
+    extra_games = [item.game_name for item in watchlist if item.is_active]
+
     token = None
     if account:
         token = get_decrypted_tokens(account)["access_token"]
 
     gql = TwitchGQLClient(oauth_token=token)
     try:
-        raw_campaigns = await gql.get_available_drop_campaigns()
+        raw_campaigns = await gql.get_available_drop_campaigns(extra_games=extra_games)
         results = []
         for c in raw_campaigns:
             game = c.get("game") or {}
