@@ -72,12 +72,15 @@ class StreamWatcher:
         import urllib.parse
         import httpx
 
+        token_val = (self.oauth_token or "").replace("OAuth ", "").strip()
+        stream_cookies = {"auth-token": token_val, "persistent": token_val} if token_val else {}
         http_client = httpx.AsyncClient(
             headers={
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-                "Referer": "https://www.twitch.tv/",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+                "Referer": f"https://www.twitch.tv/{self.channel_login}",
                 "Origin": "https://www.twitch.tv",
             },
+            cookies=stream_cookies,
             timeout=httpx.Timeout(15.0),
         )
 
@@ -133,20 +136,20 @@ class StreamWatcher:
                                 lines = usher_res.text.splitlines()
                                 variant_urls = [line.strip() for line in lines if line.strip().startswith("http")]
                                 if variant_urls:
-                                    var_url = variant_urls[-1]
+                                    var_url = variant_urls[0]  # First active variant playlist
                                     var_res = await http_client.get(var_url)
                                     if var_res.status_code == 200:
                                         var_lines = var_res.text.splitlines()
                                         seg_urls = [
                                             vl.strip() for vl in var_lines 
-                                            if vl.strip().startswith("http") or (not vl.strip().startswith("#") and vl.strip().endswith(".ts"))
+                                            if vl.strip().startswith("http") or (not vl.strip().startswith("#") and len(vl.strip()) > 5)
                                         ]
                                         if seg_urls:
-                                            latest_seg = seg_urls[-1] if seg_urls[-1] != "#EXT-X-ENDLIST" else seg_urls[-2]
+                                            latest_seg = seg_urls[-1]
                                             if not latest_seg.startswith("http"):
                                                 base = var_url.rsplit("/", 1)[0]
                                                 latest_seg = f"{base}/{latest_seg}"
-                                            # Ping stream chunk with HEAD request to validate playback
+                                            # Ping stream chunk with HEAD request on CloudFront CDN
                                             await http_client.head(latest_seg)
                         except Exception as exc:
                             logger.debug(f"Usher/Variant stream ping notice for @{self.channel_login}: {exc}")
