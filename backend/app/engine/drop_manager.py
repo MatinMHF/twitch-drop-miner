@@ -127,9 +127,31 @@ class DropManager:
 
                 if target_drop:
                     search_name = campaign.get("game", {}).get("name") or game_name
-                    streams = await self.gql_client.get_live_streams_for_game(search_name, limit=10)
-                    if streams:
-                        target_channel = streams[0]  # Pick highest-viewer live stream
+                    # Check if this campaign has specific allowed channels
+                    allow_channels = details.get("allow", {}).get("channels") or campaign.get("allow", {}).get("channels")
+                    allowed_logins = None
+                    allowed_ids = None
+                    if allow_channels and isinstance(allow_channels, list):
+                        allowed_logins = {ch["name"].lower() for ch in allow_channels if isinstance(ch, dict) and ch.get("name")}
+                        allowed_ids = {str(ch["id"]) for ch in allow_channels if isinstance(ch, dict) and ch.get("id")}
+
+                    streams = await self.gql_client.get_live_streams_for_game(search_name, limit=50)
+
+                    target_channel = None
+                    if allowed_logins is not None and len(allowed_logins) > 0:
+                        # Filter to only streamers in the campaign's whitelist
+                        eligible = [
+                            s for s in streams
+                            if s["channel_login"].lower() in allowed_logins or str(s.get("channel_id")) in allowed_ids
+                        ]
+                        if eligible:
+                            target_channel = eligible[0]
+                        else:
+                            logger.info(f"No active whitelisted drop channels currently live for '{campaign.get('name')}' ({game_name}).")
+                    elif streams:
+                        target_channel = streams[0]
+
+                    if target_channel:
                         selected_campaign_ids.add(campaign_id)
                         targets.append({
                             "game_id": game_id,
@@ -149,7 +171,7 @@ class DropManager:
                         if len(targets) >= max_concurrent:
                             return targets
                     else:
-                        logger.info(f"No live streams found for game '{search_name}'.")
+                        logger.info(f"No eligible live drop streams found for game '{search_name}'.")
 
         return targets
 
