@@ -12,9 +12,7 @@ import { SettingsModal } from './components/SettingsModal';
 import {
   Tv,
   Lock,
-  UserCheck,
   Loader2,
-  ShieldCheck,
   Sparkles,
   ArrowRight,
 } from 'lucide-react';
@@ -23,7 +21,7 @@ export const App: React.FC = () => {
   const { user, isLoading, login, setupAdmin } = useAuth();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isTwitchAuthOpen, setIsTwitchAuthOpen] = useState(false);
-  const [claimedCount, setClaimedCount] = useState(0);
+  const [claimedCount] = useState(0);
   const [watchlistCount, setWatchlistCount] = useState(0);
 
   // Form states for login/setup

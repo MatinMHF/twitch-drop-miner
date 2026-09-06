@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../services/api';
-import { Calendar, Gift, ExternalLink, Sparkles, Loader2 } from 'lucide-react';
+import { Calendar, Loader2 } from 'lucide-react';
 
 export const DropCampaignList: React.FC = () => {
   const [campaigns, setCampaigns] = useState<any[]>([]);

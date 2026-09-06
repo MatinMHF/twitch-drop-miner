@@ -7,9 +7,7 @@ import {
   LogOut,
   Radio,
   Sliders,
-  ShieldCheck,
   CheckCircle2,
-  AlertCircle,
   Sparkles,
 } from 'lucide-react';
 
@@ -20,9 +18,7 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({ onOpenSettings, onOpenTwitchAuth }) => {
   const { user, twitchAccount, logout } = useAuth();
-  const { isConnected, status } = useWebSocket();
-
-  const isMining = status?.state === 'MINING';
+  const { isConnected } = useWebSocket();
 
   return (
     <header className="sticky top-0 z-30 border-b border-slate-800/80 bg-slate-900/90 backdrop-blur-md">

@@ -1,6 +1,6 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef } from 'react';
 import { useWebSocket } from '../context/WebSocketContext';
-import { Terminal, Trash2 } from 'lucide-react';
+import { Terminal } from 'lucide-react';
 
 export const LiveLogsViewer: React.FC = () => {
   const { logs } = useWebSocket();

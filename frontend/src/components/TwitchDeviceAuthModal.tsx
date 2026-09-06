@@ -1,14 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { DeviceCodeInit, DeviceCodeStatus } from '../services/types';
+import { DeviceCodeInit } from '../services/types';
 import {
   X,
   Tv,
   ExternalLink,
   Copy,
   CheckCircle2,
-  AlertCircle,
   Loader2,
   Trash2,
   KeyRound,

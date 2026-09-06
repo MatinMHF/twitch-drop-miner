@@ -164,6 +164,22 @@ PYTHONPATH=backend pytest backend/tests
 
 ---
 
+## 🗑️ Uninstallation
+
+To completely tear down the service and remove all containers, images, and data:
+
+```bash
+docker compose down -v
+docker rmi twitch-drop-miner:latest
+cd ..
+rm -rf twitch-drop-miner
+```
+
+> [!WARNING]
+> Passing the `-v` flag removes the persistent Docker data volume (`./data`). This permanently deletes your SQLite database, settings, game watchlist, and encrypted Twitch OAuth tokens.
+
+---
+
 ## 🤝 Contributing
 
 Contributions are welcome! Please review [CONTRIBUTING.md](CONTRIBUTING.md) for details on code style, testing, and pull request procedures.
@@ -173,3 +189,4 @@ Contributions are welcome! Please review [CONTRIBUTING.md](CONTRIBUTING.md) for 
 ## 📄 License
 
 This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
+

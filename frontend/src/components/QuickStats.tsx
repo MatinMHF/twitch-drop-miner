@@ -1,6 +1,6 @@
 import React from 'react';
 import { useWebSocket } from '../context/WebSocketContext';
-import { Activity, Award, Flame, Zap, Clock, Shield } from 'lucide-react';
+import { Activity, Award, Flame, Zap } from 'lucide-react';
 
 interface QuickStatsProps {
   claimedCount: number;

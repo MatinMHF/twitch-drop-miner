@@ -11,8 +11,6 @@ import {
   Eye,
   Gift,
   ExternalLink,
-  CheckCircle,
-  AlertTriangle,
 } from 'lucide-react';
 
 export const ActiveMiningCard: React.FC = () => {
@@ -118,7 +116,7 @@ export const ActiveMiningCard: React.FC = () => {
       </div>
 
       {/* Main Mining Status Body */}
-      {isMining && status?.active_target !== null ? (
+      {isMining && ch ? (
         <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6 items-center">
           {/* Channel Stream Info */}
           <div className="lg:col-span-1 bg-slate-950/60 border border-slate-800/80 rounded-xl p-4">
