@@ -23,6 +23,7 @@ class StreamWatcher:
         channel_login: str,
         channel_display_name: str,
         game_name: str,
+        game_id: Optional[str] = None,
         stream_id: Optional[str] = None,
         on_channel_offline: Optional[Callable[[], Awaitable[None]]] = None,
         on_minute_heartbeat: Optional[Callable[[int], Awaitable[None]]] = None,
@@ -33,6 +34,7 @@ class StreamWatcher:
         self.channel_login = channel_login
         self.channel_display_name = channel_display_name
         self.game_name = game_name
+        self.game_id = str(game_id) if game_id else None
         self.stream_id = stream_id
         self.on_channel_offline = on_channel_offline
         self.on_minute_heartbeat = on_minute_heartbeat
@@ -43,7 +45,6 @@ class StreamWatcher:
         self._task: Optional[asyncio.Task] = None
         self.minutes_watched_in_session = 0
         self.last_heartbeat_at: Optional[datetime] = None
-        self.game_id: Optional[str] = None
 
     async def start(self) -> None:
         """Start the async heartbeat loop for this channel."""
@@ -87,11 +88,23 @@ class StreamWatcher:
         try:
             stream_info = await self._gql_client.get_stream_info(self.channel_login)
             if stream_info:
+                if not stream_info.get("is_live"):
+                    logger.warning(f"Channel @{self.channel_login} is offline before watching started.")
+                    if self.on_channel_offline:
+                        await self.on_channel_offline()
+                    return
+                cand_game_id = str(stream_info.get("game_id") or "")
+                if self.game_id and cand_game_id and cand_game_id != self.game_id:
+                    logger.warning(
+                        f"Streamer @{self.channel_login} is playing '{stream_info.get('game_name')}' instead of target game '{self.game_name}'. Triggering failover."
+                    )
+                    if self.on_channel_offline:
+                        await self.on_channel_offline()
+                    return
                 self.stream_id = stream_info.get("stream_id") or self.stream_id
                 self.channel_id = stream_info.get("channel_id") or self.channel_id
-                self.game_id = stream_info.get("game_id")
-                if stream_info.get("game_name"):
-                    self.game_name = stream_info["game_name"]
+                if not self.game_id and cand_game_id:
+                    self.game_id = cand_game_id
                 logger.info(
                     f"Verified @{self.channel_login}: broadcast_id={self.stream_id}, "
                     f"channel_id={self.channel_id}, game='{self.game_name}' ({self.game_id})"
@@ -194,11 +207,17 @@ class StreamWatcher:
             await http_client.aclose()
 
     async def _verify_channel_live(self) -> bool:
-        """Check if streamer is still live using official VideoPlayerStreamInfoOverlayChannel."""
+        """Check if streamer is still live and playing target game using official VideoPlayerStreamInfoOverlayChannel."""
         try:
             info = await self._gql_client.get_stream_info(self.channel_login)
             if info and info.get("is_live"):
                 self.stream_id = info.get("stream_id") or self.stream_id
+                cand_game_id = str(info.get("game_id") or "")
+                if self.game_id and cand_game_id and cand_game_id != self.game_id:
+                    logger.warning(
+                        f"Streamer @{self.channel_login} switched game from '{self.game_name}' to '{info.get('game_name')}'!"
+                    )
+                    return False
                 return True
             return False
         except Exception:
