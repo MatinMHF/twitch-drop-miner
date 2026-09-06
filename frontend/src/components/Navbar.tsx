@@ -33,8 +33,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSettings, onOpenTwitchAuth
               <span className="font-bold text-lg tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
                 Twitch Drop Miner
               </span>
-              <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-purple-500/10 text-purple-400 border border-purple-500/20">
-                v1.0.0
+              <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
+                v3.2.0
               </span>
             </div>
             <p className="text-xs text-slate-400 hidden sm:block">Headless Automated Reward Claimer</p>

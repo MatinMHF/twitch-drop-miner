@@ -243,8 +243,8 @@ class MiningWorker:
             await self.pubsub_client.start()
 
         try:
-            # Query active targets across distinct campaigns
-            targets = await self.drop_manager.select_all_active_targets(max_concurrent=5)
+            # Query active targets (single stream focus matching Twitch drop credit rules)
+            targets = await self.drop_manager.select_all_active_targets(max_concurrent=1)
             new_target_map = {t["campaign_id"]: t for t in targets}
 
             # 1. Stop watchers for campaigns no longer present in active targets

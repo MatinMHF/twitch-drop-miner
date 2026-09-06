@@ -38,6 +38,10 @@ export const ActiveMiningCard: React.FC = () => {
         campaign_name: status.active_campaign_name || 'Drop Campaign',
         drop_id: status.current_drop_id || '',
         drop_name: status.current_drop_name || 'Drop Reward',
+        required_minutes: status.current_drop_required_minutes || 60,
+        current_minutes: status.current_drop_minutes_watched || 0,
+        progress_percent: status.current_drop_progress_percent || 0,
+        channel: status.active_channel,
       }] : []);
 
   return (
@@ -155,6 +159,32 @@ export const ActiveMiningCard: React.FC = () => {
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                   <span>Mining Active</span>
                 </span>
+              </div>
+
+              {/* Progress Bar & Channel Info */}
+              <div className="space-y-1.5 pt-1">
+                <div className="flex items-center justify-between text-xs font-semibold">
+                  <span className="text-slate-300 flex items-center gap-1.5">
+                    <span className="text-purple-400 font-mono text-[11px]">@{target.channel?.channel_display_name || target.channel?.channel_login || 'live_channel'}</span>
+                  </span>
+                  <span className="text-purple-400 font-mono">
+                    {target.current_minutes || 0} / {target.required_minutes || 60}m ({target.progress_percent !== undefined ? target.progress_percent : Math.round(((target.current_minutes || 0) / Math.max(target.required_minutes || 60, 1)) * 100)}%)
+                  </span>
+                </div>
+
+                <div className="w-full bg-slate-900 rounded-full h-2 overflow-hidden border border-slate-800">
+                  <div
+                    className="bg-gradient-to-r from-purple-600 to-indigo-500 h-full rounded-full transition-all duration-500 shadow-sm"
+                    style={{
+                      width: `${Math.min(
+                        target.progress_percent !== undefined
+                          ? target.progress_percent
+                          : Math.round(((target.current_minutes || 0) / Math.max(target.required_minutes || 60, 1)) * 100),
+                        100
+                      )}%`,
+                    }}
+                  />
+                </div>
               </div>
 
               <div className="flex items-center justify-between text-xs text-slate-400 pt-2 border-t border-slate-800/60">

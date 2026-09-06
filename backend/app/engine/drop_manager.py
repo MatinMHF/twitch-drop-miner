@@ -163,43 +163,16 @@ class DropManager:
                             "drop_name": target_drop["drop_name"],
                             "required_minutes": target_drop["required_minutes"],
                             "current_minutes": target_drop["current_minutes"],
+                            "progress_percent": round((target_drop["current_minutes"] / max(target_drop["required_minutes"], 1)) * 100, 1),
                             "channel": target_channel,
                         })
                         logger.info(
-                            f"Multi-Target [{len(targets)}/{max_concurrent}] Added '{target_drop['drop_name']}' ({game_name}) on @{target_channel['channel_login']}"
+                            f"Target Selected: '{target_drop['drop_name']}' ({game_name}) on @{target_channel['channel_login']} [{target_drop['current_minutes']}/{target_drop['required_minutes']}m]"
                         )
                         if len(targets) >= max_concurrent:
                             return targets
                     else:
                         logger.info(f"No eligible live drop streams found for game '{search_name}'.")
-
-            # Fallback (matching TwitchDropsMiner): If no explicit campaign was returned in GQL yet,
-            # but the watchlisted game is live on Twitch, actively farm the game's top live stream.
-            game_campaign_selected = any(t["game_name"] == game_name for t in targets)
-            if not game_campaign_selected and len(targets) < max_concurrent:
-                fallback_streams = await self.gql_client.get_live_streams_for_game(game_name, limit=10)
-                if fallback_streams:
-                    target_channel = fallback_streams[0]
-                    camp_key = f"live-drops-{game_id}"
-                    if camp_key not in selected_campaign_ids:
-                        selected_campaign_ids.add(camp_key)
-                        targets.append({
-                            "game_id": game_id,
-                            "game_name": game_name,
-                            "campaign_id": camp_key,
-                            "campaign_name": f"{game_name} Drops Event",
-                            "drop_id": f"drop-{game_id}",
-                            "drop_instance_id": f"drop-{game_id}",
-                            "drop_name": f"{game_name} Active Drop",
-                            "required_minutes": 60,
-                            "current_minutes": 0,
-                            "channel": target_channel,
-                        })
-                        logger.info(
-                            f"Multi-Target [{len(targets)}/{max_concurrent}] Added '{game_name} Active Drop' on @{target_channel['channel_login']} (Live Stream Mining)"
-                        )
-                        if len(targets) >= max_concurrent:
-                            return targets
 
         return targets
 
