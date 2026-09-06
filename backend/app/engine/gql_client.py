@@ -105,6 +105,7 @@ class TwitchGQLClient:
                 id
                 name
                 boxArtURL
+                viewersCount
               }
             }
           }
@@ -114,15 +115,25 @@ class TwitchGQLClient:
             data = await self.execute_raw_query(search_query_doc, {"query": q_clean})
             games_data = data.get("searchFor", {}).get("games", {}).get("items", [])
             for g in games_data:
-                gid = str(g.get("id"))
+                gid = str(g.get("id") or "").strip()
                 gname = g.get("name")
-                if gid and gname and gid not in seen_ids:
-                    seen_ids.add(gid)
-                    items.append({
-                        "id": gid,
-                        "name": gname,
-                        "box_art_url": f"https://static-cdn.jtvnw.net/ttv-boxart/{gid}-285x380.jpg",
-                    })
+                if not gid or not gname or gid in seen_ids:
+                    continue
+                seen_ids.add(gid)
+
+                box_art = g.get("boxArtURL")
+                if box_art:
+                    box_art_url = box_art.replace("{width}", "285").replace("{height}", "380")
+                else:
+                    box_art_url = f"https://static-cdn.jtvnw.net/ttv-boxart/{gid}-285x380.jpg"
+
+                viewers = g.get("viewersCount") or 0
+                items.append({
+                    "id": gid,
+                    "name": gname,
+                    "box_art_url": box_art_url,
+                    "viewers_count": viewers,
+                })
         except Exception as exc:
             logger.debug(f"Twitch searchFor query error: {exc}")
 
@@ -131,14 +142,20 @@ class TwitchGQLClient:
             campaigns = await self.get_available_drop_campaigns()
             for c in campaigns:
                 g = c.get("game") or {}
-                gid = str(g.get("id"))
+                gid = str(g.get("id") or "").strip()
                 gname = g.get("name", "")
                 if gid and gname and q_lower in gname.lower() and gid not in seen_ids:
                     seen_ids.add(gid)
+                    box_art = g.get("boxArtURL")
+                    if box_art:
+                        box_art_url = box_art.replace("{width}", "285").replace("{height}", "380")
+                    else:
+                        box_art_url = f"https://static-cdn.jtvnw.net/ttv-boxart/{gid}-285x380.jpg"
                     items.append({
                         "id": gid,
                         "name": gname,
-                        "box_art_url": f"https://static-cdn.jtvnw.net/ttv-boxart/{gid}-285x380.jpg",
+                        "box_art_url": box_art_url,
+                        "viewers_count": 0,
                     })
         except Exception as exc:
             logger.debug(f"Campaign search filter error: {exc}")
@@ -152,17 +169,45 @@ class TwitchGQLClient:
                     gid = str(game_node.get("id"))
                     slug = game_node.get("slug") or q_clean
                     display_name = game_node.get("displayName") or slug.replace("-", " ").title()
+                    box_art = game_node.get("boxArtURL")
+                    if box_art:
+                        box_art_url = box_art.replace("{width}", "285").replace("{height}", "380")
+                    else:
+                        box_art_url = f"https://static-cdn.jtvnw.net/ttv-boxart/{gid}-285x380.jpg"
                     if gid not in seen_ids:
                         seen_ids.add(gid)
                         items.append({
                             "id": gid,
                             "name": display_name,
-                            "box_art_url": f"https://static-cdn.jtvnw.net/ttv-boxart/{gid}-285x380.jpg",
+                            "box_art_url": box_art_url,
+                            "viewers_count": 0,
                         })
             except Exception as exc:
                 logger.debug(f"DirectoryGameRedirect query error: {exc}")
 
-        # Return only verified Twitch games (empty list if no real Twitch game found)
+        # Smart ranking:
+        # Priority 1: Exact match name (case-insensitive)
+        # Priority 2: Starts with query
+        # Priority 3: Contains all query words
+        # Then sub-sort by viewers_count descending
+        query_words = q_lower.split()
+
+        def rank_score(item: Dict[str, Any]) -> tuple:
+            name_l = item["name"].lower()
+            viewers = item.get("viewers_count", 0)
+            if name_l == q_lower:
+                match_tier = 0
+            elif name_l.startswith(q_lower):
+                match_tier = 1
+            elif all(w in name_l for w in query_words):
+                match_tier = 2
+            elif any(w in name_l for w in query_words):
+                match_tier = 3
+            else:
+                match_tier = 4
+            return (match_tier, -viewers)
+
+        items.sort(key=rank_score)
         return items[:limit]
 
     async def get_available_drop_campaigns(self) -> List[Dict[str, Any]]:
