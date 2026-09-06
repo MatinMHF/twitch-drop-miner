@@ -81,8 +81,16 @@ async def list_watchlist(
     status = miner_service.get_status()
     current_game_id = status.get("active_game_id")
 
+    active_game_names: dict[str, int] = {}
+    if miner_service.twitch and hasattr(miner_service.twitch, "inventory") and miner_service.twitch.inventory:
+        for c in miner_service.twitch.inventory:
+            gname = getattr(getattr(c, "game", None), "name", "").lower()
+            if gname:
+                active_game_names[gname] = active_game_names.get(gname, 0) + 1
+
     res = []
     for item in items:
+        camp_count = active_game_names.get(item.game_name.lower(), 0)
         res.append(
             WatchlistItemResponse(
                 id=item.id,
@@ -93,8 +101,8 @@ async def list_watchlist(
                 is_active=item.is_active,
                 auto_mine=item.auto_mine,
                 created_at=item.created_at,
-                active_campaigns_count=0,
-                is_currently_mining=(item.game_id == current_game_id),
+                active_campaigns_count=camp_count,
+                is_currently_mining=(item.game_id == current_game_id or item.game_name.lower() == str(status.get("active_game_name", "")).lower()),
             )
         )
     return res
@@ -172,8 +180,7 @@ async def delete_from_watchlist(
             detail="Game not found in watchlist",
         )
     # Check if we need to switch miner target
-    if miner_service.active_target and miner_service.active_target.get("game_id") == game_id:
-        asyncio.create_task(miner_service.check_and_mine())
+    asyncio.create_task(miner_service.check_and_mine())
     return {"message": "Game removed from watchlist"}
 
 

@@ -405,11 +405,23 @@ export const WatchlistManager: React.FC<WatchlistManagerProps> = ({ onWatchlistC
                 )}
 
                 <div className="min-w-0">
-                  <div className="flex items-center space-x-2">
+                  <div className="flex flex-wrap items-center gap-1.5">
                     <p className="text-sm font-bold text-white truncate">{item.game_name}</p>
-                    {item.is_currently_mining && (
+                    {item.is_currently_mining ? (
                       <span className="text-[10px] font-semibold uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full animate-pulse">
                         Mining Now
+                      </span>
+                    ) : item.active_campaigns_count > 0 ? (
+                      <span className="text-[10px] font-medium bg-purple-500/20 text-purple-300 border border-purple-500/30 px-2 py-0.5 rounded-full flex items-center space-x-1">
+                        <Sparkles className="w-2.5 h-2.5 text-purple-400" />
+                        <span>Active Drops ({item.active_campaigns_count})</span>
+                      </span>
+                    ) : (
+                      <span
+                        className="text-[10px] font-medium bg-amber-500/10 text-amber-400/90 border border-amber-500/20 px-2 py-0.5 rounded-full flex items-center space-x-1"
+                        title="No active Twitch drop campaign currently. Miner will auto-start as soon as Twitch launches drops for this game!"
+                      >
+                        <span>⏳ Waiting for Drops (Auto-start)</span>
                       </span>
                     )}
                   </div>
