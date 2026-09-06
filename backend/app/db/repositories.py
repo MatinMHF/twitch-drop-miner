@@ -195,6 +195,63 @@ async def update_game_priority(db: AsyncSession, game_id: str, priority: int, au
     return item
 
 
+async def restore_watchlist(
+    db: AsyncSession,
+    items: List[Dict[str, Any]],
+    replace_existing: bool = True,
+) -> List[GameWatchlist]:
+    """Restore watchlist games and their exact priorities from backup."""
+    if replace_existing:
+        await db.execute(delete(GameWatchlist))
+        await db.commit()
+
+    saved_items: List[GameWatchlist] = []
+    for idx, it in enumerate(items):
+        gid = str(it.get("game_id", "")).strip()
+        gname = str(it.get("game_name", "")).strip()
+        if not gid or not gname:
+            continue
+
+        box_art = it.get("box_art_url")
+        prio = it.get("priority", idx)
+        auto_mine = bool(it.get("auto_mine", True))
+        is_active = bool(it.get("is_active", True))
+
+        stmt = select(GameWatchlist).where(GameWatchlist.game_id == gid)
+        res = await db.execute(stmt)
+        existing = res.scalars().first()
+
+        if existing:
+            existing.game_name = gname
+            existing.box_art_url = box_art or existing.box_art_url
+            existing.priority = prio
+            existing.auto_mine = auto_mine
+            existing.is_active = is_active
+            saved_items.append(existing)
+        else:
+            entry = GameWatchlist(
+                id=str(uuid.uuid4()),
+                game_id=gid,
+                game_name=gname,
+                box_art_url=box_art,
+                priority=prio,
+                auto_mine=auto_mine,
+                is_active=is_active,
+            )
+            db.add(entry)
+            saved_items.append(entry)
+
+    await db.commit()
+    for entry in saved_items:
+        await db.refresh(entry)
+
+    # Re-fetch in clean priority order
+    stmt_all = select(GameWatchlist).order_by(asc(GameWatchlist.priority))
+    res_all = await db.execute(stmt_all)
+    return list(res_all.scalars().all())
+
+
+
 # --- Claimed Drops Repository ---
 
 async def log_claimed_drop(

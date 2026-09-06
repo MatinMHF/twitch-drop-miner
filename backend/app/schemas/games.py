@@ -43,3 +43,26 @@ class WatchlistItemResponse(BaseModel):
 
 class ReorderWatchlistRequest(BaseModel):
     game_ids: List[str]
+
+
+class WatchlistBackupItem(BaseModel):
+    game_id: str
+    game_name: str
+    box_art_url: Optional[str] = None
+    priority: int = 0
+    auto_mine: bool = True
+    is_active: bool = True
+
+
+class WatchlistBackupData(BaseModel):
+    app: str = "Twitch Drop Miner"
+    version: str = "1.0.0"
+    exported_at: datetime
+    total_games: int
+    games: List[WatchlistBackupItem]
+
+
+class RestoreWatchlistRequest(BaseModel):
+    games: List[WatchlistBackupItem]
+    replace_existing: bool = True
+

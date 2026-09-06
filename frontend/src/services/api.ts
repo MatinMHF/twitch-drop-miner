@@ -5,6 +5,7 @@ import {
   DeviceCodeStatus,
   GameSearchResult,
   WatchlistItem,
+  WatchlistBackupData,
   MinerStatus,
   ClaimedDrop,
   AppSettings,
@@ -93,6 +94,12 @@ export const api = {
     request<{ message: string }>(`/api/games/watchlist/${gameId}`, { method: 'DELETE' }),
   reorderWatchlist: (gameIds: string[]) =>
     request<{ message: string }>('/api/games/watchlist/reorder', { method: 'POST', body: JSON.stringify({ game_ids: gameIds }) }),
+  backupWatchlist: () => request<WatchlistBackupData>('/api/games/watchlist/backup'),
+  restoreWatchlist: (data: { games: any[]; replace_existing?: boolean }) =>
+    request<WatchlistItem[]>('/api/games/watchlist/restore', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
 
   // Campaigns & Claims
   getActiveCampaigns: () => request<any[]>('/api/campaigns/active'),

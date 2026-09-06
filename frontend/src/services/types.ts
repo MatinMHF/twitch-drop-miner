@@ -47,6 +47,24 @@ export interface WatchlistItem {
   is_currently_mining: boolean;
 }
 
+export interface WatchlistBackupItem {
+  game_id: string;
+  game_name: string;
+  box_art_url?: string;
+  priority: number;
+  auto_mine: boolean;
+  is_active: boolean;
+}
+
+export interface WatchlistBackupData {
+  app: string;
+  version: string;
+  exported_at: string;
+  total_games: number;
+  games: WatchlistBackupItem[];
+}
+
+
 export interface ChannelStreamInfo {
   channel_id: string;
   channel_login: string;

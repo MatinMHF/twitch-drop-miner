@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,6 +15,7 @@ from app.db.repositories import (
     get_decrypted_tokens,
     get_watchlist,
     remove_game_from_watchlist,
+    restore_watchlist,
     update_game_priority,
 )
 from app.engine.gql_client import TwitchGQLClient
@@ -22,7 +24,10 @@ from app.schemas.games import (
     AddWatchlistRequest,
     GameSearchResult,
     ReorderWatchlistRequest,
+    RestoreWatchlistRequest,
     UpdateWatchlistRequest,
+    WatchlistBackupData,
+    WatchlistBackupItem,
     WatchlistItemResponse,
 )
 
@@ -186,3 +191,68 @@ async def reorder_watchlist(
         await update_game_priority(db, gid, priority=idx)
     await miner_service.check_and_mine()
     return {"message": "Watchlist reordered successfully"}
+
+
+@router.get("/watchlist/backup", response_model=WatchlistBackupData)
+async def backup_watchlist(
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """Export the current watchlist games and their exact priority order as a backup payload."""
+    from datetime import timezone
+    items = await get_watchlist(db)
+    backup_items = [
+        WatchlistBackupItem(
+            game_id=item.game_id,
+            game_name=item.game_name,
+            box_art_url=item.box_art_url,
+            priority=item.priority,
+            auto_mine=item.auto_mine,
+            is_active=item.is_active,
+        )
+        for item in items
+    ]
+    return WatchlistBackupData(
+        app="Twitch Drop Miner",
+        version="1.0.0",
+        exported_at=datetime.now(timezone.utc),
+        total_games=len(backup_items),
+        games=backup_items,
+    )
+
+
+@router.post("/watchlist/restore", response_model=List[WatchlistItemResponse])
+async def restore_watchlist_endpoint(
+    body: RestoreWatchlistRequest,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """Restore watchlist games and their exact priority order from a backup file."""
+    if not body.games:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Backup payload contains no games to restore.",
+        )
+
+    dict_items = [g.model_dump() for g in body.games]
+    restored = await restore_watchlist(db, dict_items, replace_existing=body.replace_existing)
+    await miner_service.check_and_mine()
+
+    status_data = miner_service.get_status()
+    current_game_id = status_data.get("active_game_id")
+
+    return [
+        WatchlistItemResponse(
+            id=item.id,
+            game_id=item.game_id,
+            game_name=item.game_name,
+            box_art_url=item.box_art_url,
+            priority=item.priority,
+            is_active=item.is_active,
+            auto_mine=item.auto_mine,
+            created_at=item.created_at,
+            is_currently_mining=(item.game_id == current_game_id),
+        )
+        for item in restored
+    ]
+
