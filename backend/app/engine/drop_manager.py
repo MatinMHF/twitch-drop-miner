@@ -84,6 +84,18 @@ class DropManager:
         targets: List[Dict[str, Any]] = []
         selected_campaign_ids = set()
 
+        # Preload active drops progress from user's Twitch Inventory
+        user_drops_progress = {}
+        try:
+            inv = await self.gql_client.get_inventory_drops()
+            for c in (inv.get("dropCampaignsInProgress") or []):
+                for d in (c.get("timeBasedDrops") or []):
+                    d_id = d.get("id")
+                    if d_id and d.get("self"):
+                        user_drops_progress[d_id] = d["self"]
+        except Exception as exc:
+            logger.debug(f"Could not pre-fetch inventory progress: {exc}")
+
         for item in watchlist:
             if not item.is_active or not item.auto_mine:
                 continue
@@ -111,13 +123,11 @@ class DropManager:
                     drop_name = drop.get("name", "Unknown Drop")
                     required_min = drop.get("requiredMinutesWatched", 0) or 0
 
-                    self_node = drop.get("self") or {}
+                    self_node = drop.get("self") or user_drops_progress.get(drop_id) or {}
                     current_min = self_node.get("currentMinutesWatched")
                     if current_min is None:
                         current_min = drop.get("currentMinutesWatched", 0) or 0
-                    is_claimed = self_node.get("isClaimed")
-                    if is_claimed is None:
-                        is_claimed = drop.get("isClaimed", False)
+                    is_claimed = bool(self_node.get("isClaimed", False))
                     drop_instance_id = self_node.get("dropInstanceID") or drop_id
 
                     # Auto-claim completed drops
@@ -141,6 +151,7 @@ class DropManager:
                             "drop_name": drop_name,
                             "required_minutes": required_min,
                             "current_minutes": current_min,
+                            "progress_percent": round((current_min / max(required_min, 1)) * 100, 1),
                         }
 
                 if target_drop:

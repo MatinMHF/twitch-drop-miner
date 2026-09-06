@@ -277,6 +277,12 @@ class MiningWorker:
                         )
                         await watcher.start()
                         self.stream_watchers[cid] = watcher
+                    if cid in self.active_targets:
+                        old_mins = self.active_targets[cid].get("current_minutes", 0)
+                        if old_mins > target.get("current_minutes", 0):
+                            target["current_minutes"] = old_mins
+                            req = target.get("required_minutes", 1)
+                            target["progress_percent"] = round((old_mins / max(req, 1)) * 100, 1)
                     self.active_targets[cid] = target
                 else:
                     logger.info(
@@ -352,6 +358,13 @@ class MiningWorker:
                                             target["progress_percent"] = round((c_mins / max(req, 1)) * 100, 1)
                                             updated_from_twitch = True
                                             break
+
+                    # Optimistic increment fallback if Twitch analytics batch has a slight reporting delay
+                    if not updated_from_twitch:
+                        req = target.get("required_minutes", 1)
+                        target["current_minutes"] = min(target.get("current_minutes", 0) + 1, req)
+                        target["progress_percent"] = round((target["current_minutes"] / max(req, 1)) * 100, 1)
+
                 except Exception as exc:
                     logger.debug(f"Progress sync notice: {exc}")
 
