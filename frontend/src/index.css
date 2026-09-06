@@ -181,30 +181,6 @@ html:not(.dark) [class*="h-2.5 rounded-full"] {
   border-color: #cbd5e1 !important;
 }
 
-/* Keep Live Logs Viewer Terminal Dark & Crisp */
-.dark pre,
-pre,
-[class*="LiveLogsViewer"] pre {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-}
-
-html:not(.dark) .terminal-box {
-  background-color: #090d16 !important;
-  border-color: #1e293b !important;
-  color: #f1f5f9 !important;
-}
-
-html:not(.dark) .terminal-box .text-slate-200,
-html:not(.dark) .terminal-box .text-slate-300,
-html:not(.dark) .terminal-box .text-slate-400 {
-  color: #e2e8f0 !important;
-}
-
-html:not(.dark) .terminal-box .text-slate-500 {
-  color: #94a3b8 !important;
-}
-
-
 /* Custom modern scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
