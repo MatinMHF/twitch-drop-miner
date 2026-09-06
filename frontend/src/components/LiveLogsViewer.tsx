@@ -7,7 +7,7 @@ export const LiveLogsViewer: React.FC = () => {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   return (
-    <div className="bg-slate-950/90 border border-slate-800 rounded-2xl p-5 shadow-xl font-mono text-xs">
+    <div className="terminal-box bg-slate-950/90 border border-slate-800 rounded-2xl p-5 shadow-xl font-mono text-xs">
       <div className="flex items-center justify-between pb-3 border-b border-slate-800 text-slate-400">
         <div className="flex items-center space-x-2">
           <Terminal className="w-4 h-4 text-purple-400" />
