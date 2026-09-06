@@ -1,7 +1,4 @@
-"""Game discovery and Watchlist management API routes."""
-
-from __future__ import annotations
-
+import asyncio
 from datetime import datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -118,8 +115,8 @@ async def add_to_watchlist(
         priority=body.priority,
         auto_mine=body.auto_mine,
     )
-    # Trigger miner to check if new campaign should be picked up immediately
-    await miner_service.check_and_mine()
+    # Trigger miner in background to check if new campaign should be picked up immediately
+    asyncio.create_task(miner_service.check_and_mine())
 
     return WatchlistItemResponse(
         id=item.id,
@@ -148,7 +145,7 @@ async def update_watchlist_item(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Game not found in watchlist",
         )
-    await miner_service.check_and_mine()
+    asyncio.create_task(miner_service.check_and_mine())
     return WatchlistItemResponse(
         id=item.id,
         game_id=item.game_id,
@@ -176,7 +173,7 @@ async def delete_from_watchlist(
         )
     # Check if we need to switch miner target
     if miner_service.active_target and miner_service.active_target.get("game_id") == game_id:
-        await miner_service.check_and_mine()
+        asyncio.create_task(miner_service.check_and_mine())
     return {"message": "Game removed from watchlist"}
 
 
@@ -189,7 +186,7 @@ async def reorder_watchlist(
     """Batch update game priorities according to ordered list of game IDs."""
     for idx, gid in enumerate(body.game_ids):
         await update_game_priority(db, gid, priority=idx)
-    await miner_service.check_and_mine()
+    asyncio.create_task(miner_service.check_and_mine())
     return {"message": "Watchlist reordered successfully"}
 
 
@@ -236,7 +233,7 @@ async def restore_watchlist_endpoint(
 
     dict_items = [g.model_dump() for g in body.games]
     restored = await restore_watchlist(db, dict_items, replace_existing=body.replace_existing)
-    await miner_service.check_and_mine()
+    asyncio.create_task(miner_service.check_and_mine())
 
     status_data = miner_service.get_status()
     current_game_id = status_data.get("active_game_id")
@@ -255,4 +252,5 @@ async def restore_watchlist_endpoint(
         )
         for item in restored
     ]
+
 
