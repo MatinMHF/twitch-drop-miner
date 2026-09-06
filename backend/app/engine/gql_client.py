@@ -98,18 +98,19 @@ class TwitchGQLClient:
 
     async def get_available_drop_campaigns(self) -> List[Dict[str, Any]]:
         """Fetch all active and upcoming Drop campaigns."""
-        variables = {}
-        data = await self.execute_query("DropsHighlightService_AvailableDrops", variables)
-        campaigns = []
-
-        # Parse user drops dashboard / highlight service
-        user_data = data.get("currentUser", {}) or {}
-        highlight_drops = user_data.get("dropCampaignsInProgress", []) or []
-        for c in highlight_drops:
-            if c:
-                campaigns.append(c)
-
-        return campaigns
+        variables = {"fetchRewardCampaigns": False}
+        try:
+            data = await self.execute_query("ViewerDropsDashboard", variables)
+            user_data = data.get("currentUser", {}) or data.get("user", {}) or {}
+            campaigns = (
+                user_data.get("dropCampaigns", [])
+                or user_data.get("dropCampaignsInProgress", [])
+                or []
+            )
+            return [c for c in campaigns if c]
+        except Exception as exc:
+            logger.warning(f"Failed to fetch available drop campaigns: {exc}")
+            return []
 
     async def get_campaign_details(self, campaign_id: str) -> Optional[Dict[str, Any]]:
         """Fetch detailed drop rules and progress for a specific campaign."""
@@ -119,17 +120,18 @@ class TwitchGQLClient:
         }
         try:
             data = await self.execute_query("DropCampaignDetails", variables)
-            return data.get("user", {}).get("dropCampaign")
+            user_node = data.get("user", {}) or data.get("currentUser", {}) or {}
+            return user_node.get("dropCampaign")
         except Exception as exc:
             logger.warning(f"Failed to fetch campaign details for {campaign_id}: {exc}")
             return None
 
     async def get_inventory_drops(self) -> Dict[str, Any]:
         """Fetch current user's drop inventory progress and claimable drops."""
-        variables = {}
+        variables = {"fetchRewardCampaigns": False}
         try:
             data = await self.execute_query("ViewerDropsDashboard", variables)
-            return data.get("currentUser", {}) or {}
+            return data.get("currentUser", {}) or data.get("user", {}) or {}
         except Exception as exc:
             logger.warning(f"Failed to fetch user inventory drops: {exc}")
             return {}

@@ -36,28 +36,28 @@ PERSISTED_QUERY_HASHES: Dict[str, str] = {
     # Drop Campaigns & Inventory
     "DropCampaignDetails": os.getenv(
         "TWITCH_HASH_DROP_CAMPAIGN_DETAILS",
-        "14b5532296e8346065529f7cb2f436be3c5ca02636f3458ff62df18ae87f735c",
+        "039277bf98f3130929262cc7c6efd9c141ca3749cb6dca442fc8ead9a53f77c1",
     ),
     "DropsHighlightService_AvailableDrops": os.getenv(
         "TWITCH_HASH_AVAILABLE_DROPS",
-        "b1949711c266858064a7813a48e3de4214fe967c9b0e2f5b35889ff4c2810a9c",
+        "782dad0f032942260171d2d80a654f88bdd0c5a9dddc392e9bc92218a0f42d20",
     ),
     "ViewerDropsDashboard": os.getenv(
         "TWITCH_HASH_VIEWER_DROPS_DASHBOARD",
-        "e8b9835237990c6b8409fbc62f55496939055416047214731885b54ae52077e6",
+        "d9cae7761dafab85908c85e6683cb4201b449e66ac3bb5e894f15ff12aeafaa7",
     ),
     "ClaimDropMutation": os.getenv(
         "TWITCH_HASH_CLAIM_DROP",
-        "2f813d6288837bc2869818475bd840ef7482656a5e12fcc9a0d2481b041b1b11",
+        "a455deea71bdc9015b78eb49f4acfbce8baa7ccbedd28e549bb025bd0f751930",
     ),
     "DropCampaignClaimDrop": os.getenv(
         "TWITCH_HASH_DROP_CAMPAIGN_CLAIM_DROP",
-        "a455deea71bdc9015b78eb49f4acfbce800bc456d598281695713502842bf430",
+        "a455deea71bdc9015b78eb49f4acfbce8baa7ccbedd28e549bb025bd0f751930",
     ),
     # Directory & Channels
     "DirectoryPage_Game": os.getenv(
         "TWITCH_HASH_DIRECTORY_GAME",
-        "d5c5c0529d665a31a9c3d42de782fec9deca888aa38031d2ff287ffc9f7a77e5",
+        "86bcceb4e8b1a51256ff8eed8bd8aae4acacf80d737efe904f84f3aeadf8cafd",
     ),
     "DirectoryRoot_Directory": os.getenv(
         "TWITCH_HASH_DIRECTORY_ROOT",
@@ -73,11 +73,11 @@ PERSISTED_QUERY_HASHES: Dict[str, str] = {
     ),
     "VideoPlayerStreamInfoOverlayChannel": os.getenv(
         "TWITCH_HASH_STREAM_INFO",
-        "198492c0a1de4392a40bc0eed5ee3a7cf52885917290928db641c88d55c7b398",
+        "198492e0857f6aedead9665c81c5a06d67b25b58034649687124083ff288597d",
     ),
     "PlaybackAccessToken_Template": os.getenv(
         "TWITCH_HASH_PLAYBACK_ACCESS_TOKEN",
-        "0828119ded1c13477966434e15800ff57ddace7ba03078779303243b6d381767",
+        "ed230aa1e33e07eebb8928504583da78a5173989fadfb1ac94be06a04f3cdbe9",
     ),
     "CoreActionsMinuteWatched": os.getenv(
         "TWITCH_HASH_MINUTE_WATCHED",
