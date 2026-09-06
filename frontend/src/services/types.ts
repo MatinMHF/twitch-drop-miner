@@ -58,8 +58,23 @@ export interface ChannelStreamInfo {
   stream_id?: string;
 }
 
+export interface ActiveMiningTarget {
+  game_id: string;
+  game_name: string;
+  campaign_id: string;
+  campaign_name: string;
+  drop_id: string;
+  drop_instance_id?: string;
+  drop_name: string;
+  required_minutes: number;
+  current_minutes: number;
+  progress_percent: number;
+  channel?: ChannelStreamInfo;
+}
+
 export interface MinerStatus {
   state: 'IDLE' | 'MINING' | 'PAUSED' | 'ERROR' | 'NO_ACCOUNT';
+  active_targets?: ActiveMiningTarget[];
   active_game_id?: string;
   active_game_name?: string;
   active_campaign_id?: string;

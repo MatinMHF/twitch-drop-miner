@@ -58,36 +58,36 @@ class DropManager:
                     matched.append(c)
         return matched
 
-    async def select_next_target(self) -> Optional[Dict[str, Any]]:
-        """Select highest-priority game and active drop to mine."""
+    async def select_all_active_targets(self, max_concurrent: int = 5) -> List[Dict[str, Any]]:
+        """Select all eligible active targets across watchlist games up to max_concurrent."""
         async with AsyncSessionLocal() as db:
             watchlist = await get_watchlist(db)
 
         if not watchlist:
             logger.info("Watchlist is empty. No targets to mine.")
-            return None
+            return []
 
-        # Fetch current user's drop inventory / in-progress campaigns
-        inventory = await self.gql_client.get_inventory_drops()
-        in_progress_campaigns = inventory.get("dropCampaignsInProgress", []) or []
+        targets: List[Dict[str, Any]] = []
+        selected_campaign_ids = set()
 
-        # Iterate through prioritized watchlist
         for item in watchlist:
             if not item.is_active or not item.auto_mine:
                 continue
 
             game_name = item.game_name
-            game_id = item.game_id
+            game_id = str(item.game_id)
 
-            # Check available campaigns for this game
             active_campaigns = await self.get_active_campaigns_for_game(game_name, game_id)
 
             for campaign in active_campaigns:
                 campaign_id = campaign.get("id")
-                # Fetch full campaign details (or fallback to campaign object)
+                if not campaign_id or campaign_id in selected_campaign_ids:
+                    continue
+
                 details = await self.gql_client.get_campaign_details(campaign_id) or campaign
                 time_drops = details.get("timeBasedDrops", []) or []
 
+                target_drop = None
                 for drop in time_drops:
                     drop_id = drop.get("id")
                     drop_name = drop.get("name", "Unknown Drop")
@@ -102,7 +102,7 @@ class DropManager:
                         is_claimed = drop.get("isClaimed", False)
                     drop_instance_id = self_node.get("dropInstanceID") or drop_id
 
-                    # Check if already completed and needs claiming
+                    # Auto-claim completed drops
                     if current_min >= required_min and required_min > 0 and not is_claimed:
                         logger.info(f"Auto-claiming completed drop '{drop_name}' for '{game_name}'...")
                         await self.claim_drop_reward(
@@ -110,37 +110,53 @@ class DropManager:
                             drop_name,
                             campaign_id,
                             campaign.get("name", ""),
-                            str(item.game_id),
+                            game_id,
                             game_name,
                         )
                         continue
 
-                    # If drop is still pending and eligible to watch
-                    if not is_claimed and current_min < required_min:
-                        # Find an active channel streaming this game
-                        search_name = campaign.get("game", {}).get("name") or game_name
-                        streams = await self.gql_client.get_live_streams_for_game(search_name, limit=10)
-                        if streams:
-                            target_channel = streams[0]  # Pick highest-viewer live channel
-                            logger.info(
-                                f"Selected target: '{drop_name}' ({current_min}/{required_min}m) on @{target_channel['channel_login']}"
-                            )
-                            return {
-                                "game_id": str(item.game_id),
-                                "game_name": game_name,
-                                "campaign_id": campaign_id,
-                                "campaign_name": campaign.get("name", ""),
-                                "drop_id": drop_id,
-                                "drop_instance_id": drop_instance_id,
-                                "drop_name": drop_name,
-                                "required_minutes": required_min,
-                                "current_minutes": current_min,
-                                "channel": target_channel,
-                            }
-                        else:
-                            logger.info(f"No live streams found for game '{search_name}'.")
+                    # First pending drop in this campaign
+                    if not is_claimed and current_min < required_min and not target_drop:
+                        target_drop = {
+                            "drop_id": drop_id,
+                            "drop_instance_id": drop_instance_id,
+                            "drop_name": drop_name,
+                            "required_minutes": required_min,
+                            "current_minutes": current_min,
+                        }
 
-        return None
+                if target_drop:
+                    search_name = campaign.get("game", {}).get("name") or game_name
+                    streams = await self.gql_client.get_live_streams_for_game(search_name, limit=10)
+                    if streams:
+                        target_channel = streams[0]  # Pick highest-viewer live stream
+                        selected_campaign_ids.add(campaign_id)
+                        targets.append({
+                            "game_id": game_id,
+                            "game_name": game_name,
+                            "campaign_id": campaign_id,
+                            "campaign_name": campaign.get("name", ""),
+                            "drop_id": target_drop["drop_id"],
+                            "drop_instance_id": target_drop["drop_instance_id"],
+                            "drop_name": target_drop["drop_name"],
+                            "required_minutes": target_drop["required_minutes"],
+                            "current_minutes": target_drop["current_minutes"],
+                            "channel": target_channel,
+                        })
+                        logger.info(
+                            f"Multi-Target [{len(targets)}/{max_concurrent}] Added '{target_drop['drop_name']}' ({game_name}) on @{target_channel['channel_login']}"
+                        )
+                        if len(targets) >= max_concurrent:
+                            return targets
+                    else:
+                        logger.info(f"No live streams found for game '{search_name}'.")
+
+        return targets
+
+    async def select_next_target(self) -> Optional[Dict[str, Any]]:
+        """Select single highest-priority target to mine (backward compatibility)."""
+        targets = await self.select_all_active_targets(max_concurrent=1)
+        return targets[0] if targets else None
 
     async def claim_drop_reward(
         self,

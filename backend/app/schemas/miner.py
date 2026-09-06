@@ -47,8 +47,23 @@ class ChannelStreamInfo(BaseModel):
     stream_id: Optional[str] = None
 
 
+class ActiveMiningTarget(BaseModel):
+    game_id: str
+    game_name: str
+    campaign_id: str
+    campaign_name: str
+    drop_id: str
+    drop_instance_id: Optional[str] = None
+    drop_name: str
+    required_minutes: int
+    current_minutes: int
+    progress_percent: float = 0.0
+    channel: Optional[ChannelStreamInfo] = None
+
+
 class MinerStatusResponse(BaseModel):
     state: str  # "IDLE", "MINING", "PAUSED", "ERROR", "NO_ACCOUNT"
+    active_targets: List[ActiveMiningTarget] = []
     active_game_id: Optional[str] = None
     active_game_name: Optional[str] = None
     active_campaign_id: Optional[str] = None
