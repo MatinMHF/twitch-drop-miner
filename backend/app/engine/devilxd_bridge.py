@@ -132,7 +132,7 @@ class BridgeInventory:
         self.campaigns: Dict[str, Any] = {}
         self.drops: Dict[str, Any] = {}
 
-    def add_campaign(self, campaign: Any):
+    async def add_campaign(self, campaign: Any):
         self.campaigns[campaign.id] = campaign
 
     def update_drop(self, drop: Any):
