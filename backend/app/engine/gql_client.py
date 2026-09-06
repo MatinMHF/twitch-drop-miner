@@ -474,11 +474,11 @@ class TwitchGQLClient:
             data = await self.execute_query("DropsPage_ClaimDropRewards", variables)
             claim_data = data.get("claimDropRewards") or data.get("claimDropReward") or {}
             status_val = claim_data.get("status")
-            if status_val in ["ELIGIBLE_FOR_BADGE", "SUCCESS"] or "status" in claim_data or claim_data:
-                logger.info(f"Successfully claimed drop instance: {drop_id}")
+            if status_val in ["ELIGIBLE_FOR_BADGE", "SUCCESS"]:
+                logger.info(f"Successfully claimed drop instance: {drop_id} (status: {status_val})")
                 return True
-            logger.warning(f"Claim drop mutation result for {drop_id}: {claim_data}")
-            return True
+            logger.warning(f"Claim drop mutation rejected or pending for {drop_id}: {claim_data}")
+            return False
         except Exception as exc:
             logger.error(f"Error claiming drop {drop_id}: {exc}")
             return False

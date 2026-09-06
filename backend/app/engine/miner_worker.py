@@ -353,18 +353,16 @@ class MiningWorker:
                 except Exception as exc:
                     logger.debug(f"Progress sync notice: {exc}")
 
-            # Reconcile total current minutes
+            # Reconcile total current minutes (cap optimistic advance to +3m ahead of Twitch confirmed baseline)
             req = target.get("required_minutes", 1)
-            tot_mins = min(target.get("baseline_minutes", 0) + target.get("extra_minutes", 0), req)
+            bounded_extra = min(target.get("extra_minutes", 0), 3)
+            tot_mins = min(target.get("baseline_minutes", 0) + bounded_extra, req)
             target["current_minutes"] = tot_mins
             target["progress_percent"] = round((tot_mins / max(req, 1)) * 100, 1)
 
-            cur = target.get("current_minutes", 0)
-            req = target.get("required_minutes", 0)
-
-            # Check if reached 100%
-            if cur >= req and req > 0:
-                logger.info(f"Drop '{target['drop_name']}' reached 100% watch requirement. Claiming reward...")
+            # Check if Twitch-confirmed baseline reached 100% or total reached 100%
+            if tot_mins >= req and req > 0:
+                logger.info(f"Drop '{target['drop_name']}' watch requirement reached ({tot_mins}/{req}m). Attempting claim...")
                 if self.drop_manager:
                     claimed = await self.drop_manager.claim_drop_reward(
                         drop_id=target["drop_id"],
@@ -377,9 +375,11 @@ class MiningWorker:
                     )
                     if claimed:
                         self.total_drops_claimed_session += 1
-                        # Re-evaluate targets
+                        logger.info(f"Drop '{target['drop_name']}' successfully claimed. Re-evaluating next target...")
                         await self.check_and_mine()
                         return
+                    else:
+                        logger.debug(f"Drop '{target['drop_name']}' not yet confirmed claimable by Twitch edge; continuing watch.")
 
         await self.broadcast_status()
 
