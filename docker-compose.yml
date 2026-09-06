@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  twitch-miner:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    image: twitch-drop-miner:latest
+    container_name: twitch-drop-miner
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - ENVIRONMENT=production
+      - HOST=0.0.0.0
+      - PORT=8080
+      - DATA_DIR=/app/data
+      - TIMEZONE=UTC
+      - REQUIRE_HTTPS=false
+      - POLL_INTERVAL_MINUTES=30
+      - WATCH_HEARTBEAT_SECONDS=60
+      - AUTO_CLAIM_DROPS=true
+      - AUTO_FAILOVER_STREAMERS=true
+      # Optional: Explicit secrets (auto-generated & persisted if omitted)
+      # - SECRET_KEY=your-32-byte-hex-secret
+      # - ENCRYPTION_KEY=your-32-byte-hex-encryption-key
+      # - CSRF_SECRET=your-32-byte-hex-csrf-secret
+      # Optional: Twitch GQL Query Hash Overrides
+      # - TWITCH_SPADE_URL=https://spade.twitch.tv/batched
+      # - TWITCH_HASH_DROP_CAMPAIGN_DETAILS=14b5532296e8346065529f7cb2f436be3c5ca02636f3458ff62df18ae87f735c
+    volumes:
+      - ./data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8080/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
