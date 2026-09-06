@@ -102,7 +102,8 @@ class SpadeTracker:
                     "Referer": f"https://www.twitch.tv/{channel_login}",
                     "Origin": "https://www.twitch.tv",
                 }
-                await client.post(TWITCH_SPADE_URL, data={"data": b64_plain}, headers=spade_headers)
+                async with httpx.AsyncClient(headers=spade_headers, timeout=httpx.Timeout(10.0)) as spade_c:
+                    await spade_c.post(TWITCH_SPADE_URL, data={"data": b64_plain})
             except Exception as exc:
                 logger.debug(f"Direct spade post notice for @{channel_login}: {exc}")
 

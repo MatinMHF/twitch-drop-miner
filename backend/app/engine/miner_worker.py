@@ -314,25 +314,46 @@ class MiningWorker:
         target = self.active_targets.get(campaign_id)
 
         if target:
-            # Periodically query verified drop progress from Twitch
-            if self.drop_manager and minutes_in_session % 2 == 0:
+            # Query verified drop progress from Twitch
+            if self.drop_manager:
                 try:
                     ch_id = target.get("channel", {}).get("channel_id")
-                    if ch_id:
+                    ch_login = target.get("channel", {}).get("channel_login", "")
+                    updated_from_twitch = False
+
+                    if ch_id and ch_login:
                         ctx = await self.drop_manager.gql_client.execute_query(
                             "DropCurrentSessionContext",
-                            {"channelID": str(ch_id), "channelLogin": ""}
+                            {"channelID": str(ch_id), "channelLogin": ch_login}
                         )
                         drop_data = (ctx.get("currentUser") or {}).get("dropCurrentSession")
                         if drop_data and drop_data.get("dropID") == target.get("drop_id"):
                             cur_mins = drop_data.get("currentMinutesWatched")
-                            if cur_mins is not None:
+                            if cur_mins is not None and cur_mins >= target.get("current_minutes", 0):
                                 target["current_minutes"] = cur_mins
                                 req = drop_data.get("requiredMinutesWatched") or target.get("required_minutes", 1)
                                 target["required_minutes"] = req
                                 target["progress_percent"] = round((cur_mins / max(req, 1)) * 100, 1)
-                except Exception:
-                    pass
+                                updated_from_twitch = True
+
+                    if not updated_from_twitch:
+                        # Fallback to user Inventory progress
+                        inv = await self.drop_manager.gql_client.get_inventory_drops()
+                        for camp in inv.get("dropCampaignsInProgress", []):
+                            if camp.get("id") == target.get("campaign_id"):
+                                for d in camp.get("timeBasedDrops", []):
+                                    if d.get("id") == target.get("drop_id"):
+                                        s_node = d.get("self") or {}
+                                        c_mins = s_node.get("currentMinutesWatched")
+                                        if c_mins is not None and c_mins >= target.get("current_minutes", 0):
+                                            target["current_minutes"] = c_mins
+                                            req = d.get("requiredMinutesWatched") or target.get("required_minutes", 1)
+                                            target["required_minutes"] = req
+                                            target["progress_percent"] = round((c_mins / max(req, 1)) * 100, 1)
+                                            updated_from_twitch = True
+                                            break
+                except Exception as exc:
+                    logger.debug(f"Progress sync notice: {exc}")
 
             cur = target.get("current_minutes", 0)
             req = target.get("required_minutes", 0)

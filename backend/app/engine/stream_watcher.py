@@ -125,7 +125,7 @@ class StreamWatcher:
                         sig = playback_token["signature"]
                         usher_url = (
                             f"https://usher.ttvnw.net/api/channel/hls/{self.channel_login}.m3u8"
-                            f"?client_id={self._gql_client.client_id}&token={val}&sig={sig}&allow_source=true&allow_audio_only=true&fast_bread=true"
+                            f"?sig={sig}&token={val}&allow_source=true&allow_audio_only=true&fast_bread=true"
                         )
                         try:
                             usher_res = await http_client.get(usher_url)
@@ -137,23 +137,17 @@ class StreamWatcher:
                                     var_res = await http_client.get(var_url)
                                     if var_res.status_code == 200:
                                         var_lines = var_res.text.splitlines()
-                                        for vl in var_lines:
-                                            if 'X-TV-TWITCH-TRIGGER-URL="' in vl:
-                                                try:
-                                                    trig_url = vl.split('X-TV-TWITCH-TRIGGER-URL="')[1].split('"')[0]
-                                                    await http_client.get(trig_url)
-                                                except Exception:
-                                                    pass
                                         seg_urls = [
                                             vl.strip() for vl in var_lines 
                                             if vl.strip().startswith("http") or (not vl.strip().startswith("#") and vl.strip().endswith(".ts"))
                                         ]
                                         if seg_urls:
-                                            latest_seg = seg_urls[0]
+                                            latest_seg = seg_urls[-1] if seg_urls[-1] != "#EXT-X-ENDLIST" else seg_urls[-2]
                                             if not latest_seg.startswith("http"):
                                                 base = var_url.rsplit("/", 1)[0]
                                                 latest_seg = f"{base}/{latest_seg}"
-                                            await http_client.get(latest_seg, headers={"Range": "bytes=0-2048"})
+                                            # Ping stream chunk with HEAD request to validate playback
+                                            await http_client.head(latest_seg)
                         except Exception as exc:
                             logger.debug(f"Usher/Variant stream ping notice for @{self.channel_login}: {exc}")
 
