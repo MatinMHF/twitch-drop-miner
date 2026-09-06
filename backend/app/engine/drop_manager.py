@@ -173,6 +173,34 @@ class DropManager:
                     else:
                         logger.info(f"No eligible live drop streams found for game '{search_name}'.")
 
+            # Fallback (matching TwitchDropsMiner): If no explicit campaign was returned in GQL yet,
+            # but the watchlisted game is live on Twitch, actively farm the game's top live stream.
+            game_campaign_selected = any(t["game_name"] == game_name for t in targets)
+            if not game_campaign_selected and len(targets) < max_concurrent:
+                fallback_streams = await self.gql_client.get_live_streams_for_game(game_name, limit=10)
+                if fallback_streams:
+                    target_channel = fallback_streams[0]
+                    camp_key = f"live-drops-{game_id}"
+                    if camp_key not in selected_campaign_ids:
+                        selected_campaign_ids.add(camp_key)
+                        targets.append({
+                            "game_id": game_id,
+                            "game_name": game_name,
+                            "campaign_id": camp_key,
+                            "campaign_name": f"{game_name} Drops Event",
+                            "drop_id": f"drop-{game_id}",
+                            "drop_instance_id": f"drop-{game_id}",
+                            "drop_name": f"{game_name} Active Drop",
+                            "required_minutes": 60,
+                            "current_minutes": 0,
+                            "channel": target_channel,
+                        })
+                        logger.info(
+                            f"Multi-Target [{len(targets)}/{max_concurrent}] Added '{game_name} Active Drop' on @{target_channel['channel_login']} (Live Stream Mining)"
+                        )
+                        if len(targets) >= max_concurrent:
+                            return targets
+
         return targets
 
     async def select_next_target(self) -> Optional[Dict[str, Any]]:
