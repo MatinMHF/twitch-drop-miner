@@ -14,6 +14,7 @@ from app.db.repositories import (
     get_decrypted_tokens,
 )
 from app.engine.drop_manager import DropManager
+from app.engine.pubsub_client import TwitchPubSubClient
 from app.engine.stream_watcher import StreamWatcher
 
 
@@ -25,6 +26,7 @@ class MiningWorker:
         self.active_target: Optional[Dict[str, Any]] = None
         self.stream_watcher: Optional[StreamWatcher] = None
         self.drop_manager: Optional[DropManager] = None
+        self.pubsub_client: Optional[TwitchPubSubClient] = None
         self.last_heartbeat_at: Optional[datetime] = None
         self.next_poll_at: Optional[datetime] = None
         self.error_message: Optional[str] = None
@@ -102,11 +104,14 @@ class MiningWorker:
         self._main_task = asyncio.create_task(self._orchestrator_loop())
 
     async def stop(self) -> None:
-        """Stop miner engine and close active watchers."""
+        """Stop miner engine and close active watchers and PubSub."""
         self._is_running = False
         if self.stream_watcher:
             await self.stream_watcher.stop()
             self.stream_watcher = None
+        if self.pubsub_client:
+            await self.pubsub_client.stop()
+            self.pubsub_client = None
         if self.drop_manager:
             await self.drop_manager.close()
             self.drop_manager = None
@@ -139,6 +144,38 @@ class MiningWorker:
         await self.broadcast_status()
         await self.check_and_mine()
 
+    async def _handle_pubsub_drop_progress(self, data: Dict[str, Any]) -> None:
+        """Real-time drop progress callback from Twitch PubSub."""
+        if self.active_target:
+            cur = data.get("current_progress_min")
+            req = data.get("required_progress_min")
+            drop_id = data.get("drop_id")
+            if cur is not None and (drop_id == self.active_target.get("drop_id") or not drop_id):
+                self.active_target["current_minutes"] = cur
+                if req is not None and req > 0:
+                    self.active_target["required_minutes"] = req
+                if self.stream_watcher:
+                    self.stream_watcher.minutes_watched_in_session = 0
+                await self.broadcast_status()
+
+    async def _handle_pubsub_drop_claim(self, data: Dict[str, Any]) -> None:
+        """Real-time drop claim callback from Twitch PubSub."""
+        logger.info(f"⚡ Instant PubSub claim event triggered for {data.get('drop_name', 'Drop')}")
+        drop_instance_id = data.get("drop_instance_id") or data.get("drop_id")
+        if self.drop_manager and self.active_target and drop_instance_id:
+            claimed = await self.drop_manager.claim_drop_reward(
+                drop_id=drop_instance_id,
+                drop_name=data.get("drop_name", self.active_target.get("drop_name", "Drop")),
+                campaign_id=self.active_target.get("campaign_id", ""),
+                campaign_name=self.active_target.get("campaign_name", ""),
+                game_id=self.active_target.get("game_id", ""),
+                game_name=self.active_target.get("game_name", ""),
+                channel_name=self.active_target.get("channel", {}).get("channel_display_name"),
+            )
+            if claimed:
+                self.total_drops_claimed_session += 1
+                await self.check_and_mine()
+
     async def check_and_mine(self) -> None:
         """Evaluate targets and start watching if suitable campaign is active."""
         if self.is_paused:
@@ -153,6 +190,9 @@ class MiningWorker:
             if self.stream_watcher:
                 await self.stream_watcher.stop()
                 self.stream_watcher = None
+            if self.pubsub_client:
+                await self.pubsub_client.stop()
+                self.pubsub_client = None
             await self.broadcast_status()
             return
 
@@ -166,6 +206,16 @@ class MiningWorker:
         # Setup drop manager
         if not self.drop_manager:
             self.drop_manager = DropManager(oauth_token=access_token, twitch_user_id=account.twitch_user_id)
+
+        # Setup PubSub real-time event listener
+        if not self.pubsub_client:
+            self.pubsub_client = TwitchPubSubClient(
+                oauth_token=access_token,
+                twitch_user_id=account.twitch_user_id,
+                on_drop_progress=self._handle_pubsub_drop_progress,
+                on_drop_claim=self._handle_pubsub_drop_claim,
+            )
+            await self.pubsub_client.start()
 
         try:
             target = await self.drop_manager.select_next_target()
