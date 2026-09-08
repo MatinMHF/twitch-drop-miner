@@ -2,7 +2,7 @@
 
 <div align="center">
 
-[![CI Pipeline](https://github.com/MatinMHF/twitch-drop-miner/actions/workflows/ci.yml/badge.svg)](https://github.com/MatinMHF/twitch-drop-miner/actions/workflows/ci.yml)
+[![CI Pipeline](https://github.com/MatinMHF/twitch-drop/actions/workflows/ci.yml/badge.svg)](https://github.com/MatinMHF/twitch-drop/actions/workflows/ci.yml)
 [![Docker](https://img.shields.io/badge/Docker-Multi--Stage-blue?logo=docker)](https://www.docker.com/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688?logo=fastapi)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/React-18-61DAFB?logo=react)](https://react.dev/)
@@ -88,8 +88,8 @@ graph TD
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/MatinMHF/twitch-drop-miner.git
-cd twitch-drop-miner
+git clone https://github.com/MatinMHF/twitch-drop.git
+cd twitch-drop
 ```
 
 ### 2. Configure Environment (Optional)

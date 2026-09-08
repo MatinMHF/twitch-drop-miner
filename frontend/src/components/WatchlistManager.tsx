@@ -411,10 +411,18 @@ export const WatchlistManager: React.FC<WatchlistManagerProps> = ({ onWatchlistC
                       <span className="text-[10px] font-semibold uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full animate-pulse">
                         Mining Now
                       </span>
-                    ) : item.active_campaigns_count > 0 ? (
+                    ) : (item.active_drops_count ?? item.active_campaigns_count) > 0 ? (
                       <span className="text-[10px] font-medium bg-purple-500/20 text-purple-300 border border-purple-500/30 px-2 py-0.5 rounded-full flex items-center space-x-1">
                         <Sparkles className="w-2.5 h-2.5 text-purple-400" />
-                        <span>Active Drops ({item.active_campaigns_count})</span>
+                        <span>Active Drops ({item.active_drops_count ?? item.active_campaigns_count})</span>
+                      </span>
+                    ) : item.is_completed ? (
+                      <span
+                        className="text-[10px] font-medium bg-emerald-500/10 text-emerald-400/90 border border-emerald-500/20 px-2 py-0.5 rounded-full flex items-center space-x-1"
+                        title="All available drops for this game have been earned and claimed!"
+                      >
+                        <CheckCircle2 className="w-2.5 h-2.5 text-emerald-400" />
+                        <span>All Drops Claimed</span>
                       </span>
                     ) : (
                       <span

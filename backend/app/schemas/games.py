@@ -38,6 +38,8 @@ class WatchlistItemResponse(BaseModel):
     auto_mine: bool
     created_at: datetime
     active_campaigns_count: int = 0
+    active_drops_count: int = 0
+    is_completed: bool = False
     is_currently_mining: bool = False
 
 

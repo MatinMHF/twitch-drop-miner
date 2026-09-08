@@ -245,9 +245,10 @@ class TwitchGQLClient:
             for c in in_prog:
                 if c and isinstance(c, dict) and "id" in c:
                     cid = c["id"]
+                    status = c.get("status")
                     if cid in campaigns_by_id:
                         campaigns_by_id[cid].update(c)
-                    else:
+                    elif status in ("ACTIVE", "UPCOMING"):
                         campaigns_by_id[cid] = c
         except Exception as exc:
             logger.debug(f"Inventory query error: {exc}")

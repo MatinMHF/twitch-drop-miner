@@ -82,15 +82,42 @@ async def list_watchlist(
     current_game_id = status.get("active_game_id")
 
     active_game_names: dict[str, int] = {}
+    earnable_drop_counts: dict[str, int] = {}
+    completed_games: set[str] = set()
+
     if miner_service.twitch and hasattr(miner_service.twitch, "inventory") and miner_service.twitch.inventory:
         for c in miner_service.twitch.inventory:
+            # Exclude non-active or expired campaigns
+            if not getattr(c, "active", False) or getattr(c, "expired", False):
+                continue
+
             gname = getattr(getattr(c, "game", None), "name", "").lower()
-            if gname:
+            if not gname:
+                continue
+
+            # Check earnable drops inside this active campaign
+            earnable = 0
+            for d in getattr(c, "drops", []):
+                if not getattr(d, "is_claimed", False):
+                    can_earn_fn = getattr(d, "_base_can_earn", None)
+                    if callable(can_earn_fn):
+                        if can_earn_fn():
+                            earnable += 1
+                    else:
+                        earnable += 1
+
+            if earnable > 0:
                 active_game_names[gname] = active_game_names.get(gname, 0) + 1
+                earnable_drop_counts[gname] = earnable_drop_counts.get(gname, 0) + earnable
+            elif getattr(c, "finished", False) or (getattr(c, "total_drops", 0) > 0 and getattr(c, "claimed_drops", 0) >= getattr(c, "total_drops", 0)):
+                completed_games.add(gname)
 
     res = []
     for item in items:
-        camp_count = active_game_names.get(item.game_name.lower(), 0)
+        g_key = item.game_name.lower()
+        camp_count = active_game_names.get(g_key, 0)
+        drop_count = earnable_drop_counts.get(g_key, 0)
+        is_completed = (drop_count == 0 and camp_count == 0 and g_key in completed_games)
         res.append(
             WatchlistItemResponse(
                 id=item.id,
@@ -102,7 +129,9 @@ async def list_watchlist(
                 auto_mine=item.auto_mine,
                 created_at=item.created_at,
                 active_campaigns_count=camp_count,
-                is_currently_mining=(item.game_id == current_game_id or item.game_name.lower() == str(status.get("active_game_name", "")).lower()),
+                active_drops_count=drop_count,
+                is_completed=is_completed,
+                is_currently_mining=(item.game_id == current_game_id or g_key == str(status.get("active_game_name", "")).lower()),
             )
         )
     return res

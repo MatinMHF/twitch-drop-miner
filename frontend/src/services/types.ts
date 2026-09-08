@@ -44,6 +44,8 @@ export interface WatchlistItem {
   auto_mine: boolean;
   created_at: string;
   active_campaigns_count: number;
+  active_drops_count?: number;
+  is_completed?: boolean;
   is_currently_mining: boolean;
 }
 

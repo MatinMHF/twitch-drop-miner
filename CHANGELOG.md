@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-09-08
+
+### Fixed
+- **Watchlist Drop Count Accuracy**:
+  - Excluded expired and historical in-progress campaigns from active drop calculations in `list_watchlist`.
+  - Accurately evaluate drop earnability by checking `can_earn()` and `is_claimed` status.
+  - Added `is_completed` flag and `All Drops Claimed` badge when all drops for an active campaign have been claimed.
+  - Prevented expired campaigns in `dropCampaignsInProgress` from polluting `get_available_drop_campaigns`.
+
 ## [1.0.1] - 2026-09-06
 
 ### Fixed
