@@ -3,6 +3,7 @@
 <div align="center">
 
 [![CI Pipeline](https://github.com/MatinMHF/twitch-drop/actions/workflows/ci.yml/badge.svg)](https://github.com/MatinMHF/twitch-drop/actions/workflows/ci.yml)
+[![Latest Release](https://img.shields.io/github/v/release/MatinMHF/twitch-drop?color=blue&logo=github)](https://github.com/MatinMHF/twitch-drop/releases)
 [![Docker](https://img.shields.io/badge/Docker-Multi--Stage-blue?logo=docker)](https://www.docker.com/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688?logo=fastapi)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/React-18-61DAFB?logo=react)](https://react.dev/)
@@ -21,23 +22,24 @@ A modern, standalone, self-hosted web service for automatic Twitch Drop mining. 
 
 ```text
 +-----------------------------------------------------------------------------------+
-|  [Tv] Twitch Drop Miner  v1.0.0      (•) Telemetry Live   [@MatinMHF]  [⚙] [🌙] [🚪] |
+|  [Tv] Twitch Drop Miner  v1.1.0      (•) Telemetry Live   [@MatinMHF]  [⚙] [🌙] [🚪] |
 +-----------------------------------------------------------------------------------+
-|  [ Status: MINING ]  [ Claimed: 14 ]  [ Watchlist: 5 ]  [ Bandwidth Saved: 99.9% ]|
+|  [ Status: MINING ]  [ Claimed: 26 ]  [ Watchlist: 7 ]  [ Bandwidth Saved: 99.9% ]|
 +-----------------------------------------------------------------------------------+
 |  ACTIVE MINING OPERATION                                                          |
-|  Channel: @TopStreamer (Live) [12.4k viewers]                                     |
-|  Reward: Legendary Skin Drop (Rust Campaign)                                     |
-|  Progress: [████████████████████████░░░░░░] 78% (94 / 120 mins)  [Est. 26m left]   |
+|  Channel: @nmplol (Live) [7.4k viewers]                                           |
+|  Reward: GTA$1M (nopixel V Campaign)                                              |
+|  Progress: [████████████████░░░░░░░░] 66.7% (160 / 240 mins)  [Est. 80m left]     |
 +-----------------------------------------------------------------------------------+
-|  [ Game Watchlist (Priority Queue) ]    |  [ Active Discovered Campaigns ]        |
-|  1. Rust           [Auto-Mine: ON] [▲▼] |  • Rust Drops Event (Ends Oct 12)       |
-|  2. Escape From Tarkov [Auto-Mine: ON]  |  • Overwatch 2 Community Campaign       |
-|  3. Apex Legends   [Auto-Mine: ON]      |  • Valorant Champions Drops             |
+|  [ Game Watchlist (Priority Queue) ]             |  [ Active Discovered Campaigns ]  |
+|  1. Rainbow Six Siege [✓ All Drops Claimed] [▲▼] |  • nopixel V (Ends Sep 20)        |
+|  2. Rust              [⏳ Waiting for Drops] [▲▼] |  • Overwatch 2 Community Drops    |
+|  3. Delta Force       [✓ All Drops Claimed] [▲▼] |  • Valorant Champions Drops       |
+|  4. Grand Theft Auto V [Mining Now (2 drops)]   |  • Apex Legends Global Drops      |
 +-----------------------------------------------------------------------------------+
-|  [ Claimed Rewards History ]            |  [ Real-Time Telemetry & Event Logs ]   |
-|  ✓ AK-47 Skin - Claimed 10m ago         |  [12:15:00] Dispatched Spade heartbeat  |
-|  ✓ Tactical Vest - Claimed 2h ago       |  [12:16:00] Dispatched Spade heartbeat  |
+|  [ Claimed Rewards History ]                     |  [ Real-Time Telemetry & Logs ]   |
+|  ✓ GTA$250K - Claimed 1h ago                     |  [15:08:55] Watching @nmplol      |
+|  ✓ LAV-AA - Bombworks - Claimed 6h ago           |  [15:09:55] Heartbeat confirmed   |
 +-----------------------------------------------------------------------------------+
 ```
 
@@ -47,6 +49,7 @@ A modern, standalone, self-hosted web service for automatic Twitch Drop mining. 
 
 - 🔒 **Twitch OAuth 2.0 Device Flow**: Authenticate seamlessly using standard TV/Console device activation codes (`twitch.tv/activate`). No passwords, no 2FA credentials entered, and zero brittle browser automation (Puppeteer/Selenium).
 - ⚡ **Headless Zero-Bandwidth Mining**: Emulates minute-watched viewing events directly via Twitch GraphQL and Spade telemetry without downloading video or audio streams (saves ~99.9% bandwidth, using ~1KB/min).
+- 🎯 **Accurate Drop Availability & Completion Detection**: Evaluates campaign time windows, preconditions, and claimed benefits in real-time. Distinguishes between earnable drops, completed campaigns (`All Drops Claimed`), and games waiting for future drops.
 - 🔍 **Dynamic Game & Campaign Discovery**: Queries Twitch APIs directly to search games and discover active/upcoming drop events.
 - 📋 **Priority Watchlist**: Organize watchlisted games with drag-and-drop or rank adjustments. Automatically transitions to the next available campaign or drop reward.
 - 🔄 **Smart Streamer Failover**: Detects when a current streamer goes offline and automatically switches to the next top eligible streamer broadcasting the same game with drops enabled.
@@ -200,7 +203,7 @@ To completely tear down the service and remove all containers, images, and data:
 docker compose down -v
 docker rmi twitch-drop-miner:latest
 cd ..
-rm -rf twitch-drop-miner
+rm -rf twitch-drop
 ```
 
 > [!WARNING]
