@@ -61,13 +61,15 @@ class Settings:
     enable_badges_emotes: bool
     available_drops_check: bool
     priority_mode: PriorityMode
+    cookie_path: Optional[Path]
 
-    PASSTHROUGH = ("_settings", "_args", "_altered")
+    PASSTHROUGH = ("_settings", "_args", "_altered", "cookie_path")
 
     def __init__(self, args: ParsedArgs):
         self._settings: SettingsFile = json_load(SETTINGS_PATH, default_settings)
         self._args: ParsedArgs = args
         self._altered: bool = False
+        self.cookie_path: Optional[Path] = None
 
     # default logic of reading settings is to check args first, then the settings file
     def __getattr__(self, name: str, /) -> Any:

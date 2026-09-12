@@ -7,9 +7,15 @@ export interface UserProfile {
 
 export interface TwitchAccount {
   connected: boolean;
+  account_id?: string;
   twitch_user_id?: string;
   twitch_username?: string;
   connected_at?: string;
+}
+
+export interface MultiTwitchAccounts {
+  accounts: TwitchAccount[];
+  total_connected: number;
 }
 
 export interface DeviceCodeInit {
@@ -92,9 +98,26 @@ export interface ActiveMiningTarget {
   channel?: ChannelStreamInfo;
 }
 
+export interface MinerAccountStatus {
+  account_id: string;
+  twitch_user_id: string;
+  twitch_username: string;
+  is_running: boolean;
+  is_paused: boolean;
+  error_message?: string;
+  status_text: string;
+  active_channel?: any;
+  active_drop?: any;
+  next_poll_at?: string;
+}
+
 export interface MinerStatus {
-  state: 'IDLE' | 'MINING' | 'PAUSED' | 'ERROR' | 'NO_ACCOUNT';
+  state?: 'IDLE' | 'MINING' | 'PAUSED' | 'ERROR' | 'NO_ACCOUNT' | string;
+  is_running?: boolean;
+  is_paused?: boolean;
+  status_text?: string;
   active_targets?: ActiveMiningTarget[];
+  active_drop?: any;
   active_game_id?: string;
   active_game_name?: string;
   active_campaign_id?: string;
@@ -102,14 +125,15 @@ export interface MinerStatus {
   active_channel?: ChannelStreamInfo;
   current_drop_id?: string;
   current_drop_name?: string;
-  current_drop_progress_percent: number;
-  current_drop_minutes_watched: number;
-  current_drop_required_minutes: number;
-  total_drops_claimed_session: number;
+  current_drop_progress_percent?: number;
+  current_drop_minutes_watched?: number;
+  current_drop_required_minutes?: number;
+  total_drops_claimed_session?: number;
   last_heartbeat_at?: string;
   next_poll_at?: string;
   error_message?: string;
-  is_paused: boolean;
+  accounts_count?: number;
+  accounts?: MinerAccountStatus[];
 }
 
 export interface ClaimedDrop {

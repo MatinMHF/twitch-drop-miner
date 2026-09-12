@@ -49,6 +49,12 @@ class DeviceCodeStatusResponse(BaseModel):
 
 class TwitchAccountResponse(BaseModel):
     connected: bool
+    account_id: Optional[str] = None
     twitch_user_id: Optional[str] = None
     twitch_username: Optional[str] = None
     connected_at: Optional[datetime] = None
+
+
+class MultiTwitchAccountsResponse(BaseModel):
+    accounts: List[TwitchAccountResponse]
+    total_connected: int

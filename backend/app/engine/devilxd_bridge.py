@@ -283,11 +283,14 @@ class DummyArgs:
     logging_level = 2
 
 
-def create_devilxd_instance(priority_games: List[str]) -> tuple[Twitch, FastAPIBridgeGUIManager]:
+def create_devilxd_instance(priority_games: List[str], user_id: Optional[str] = None) -> tuple[Twitch, FastAPIBridgeGUIManager]:
     """Factory creating a headless DevilXD Twitch instance wired to FastAPIBridgeGUIManager."""
     settings = Settings(DummyArgs())
     settings.priority = priority_games
     settings.priority_mode = PriorityMode.PRIORITY_ONLY
+    if user_id:
+        from constants import DATA_STORAGE_DIR
+        settings.cookie_path = Path(DATA_STORAGE_DIR, f"cookies_{user_id}.jar")
 
     twitch = Twitch(settings)
     bridge: FastAPIBridgeGUIManager = twitch.gui

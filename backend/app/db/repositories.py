@@ -74,6 +74,18 @@ async def get_active_twitch_account(db: AsyncSession) -> Optional[TwitchAccount]
     return result.scalars().first()
 
 
+async def get_all_active_twitch_accounts(db: AsyncSession) -> List[TwitchAccount]:
+    stmt = select(TwitchAccount).where(TwitchAccount.is_active == True).order_by(TwitchAccount.created_at.asc())  # noqa: E712
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
+
+
+async def get_twitch_account_by_id(db: AsyncSession, account_id: str) -> Optional[TwitchAccount]:
+    stmt = select(TwitchAccount).where(TwitchAccount.id == account_id)
+    result = await db.execute(stmt)
+    return result.scalars().first()
+
+
 async def save_or_update_twitch_account(
     db: AsyncSession,
     twitch_user_id: str,
@@ -85,6 +97,7 @@ async def save_or_update_twitch_account(
     encrypted_access = cipher.encrypt(access_token)
     encrypted_refresh = cipher.encrypt(refresh_token) if refresh_token else None
 
+    # Find account specifically by twitch_user_id so multiple accounts coexist
     stmt = select(TwitchAccount).where(TwitchAccount.twitch_user_id == twitch_user_id)
     result = await db.execute(stmt)
     account = result.scalars().first()

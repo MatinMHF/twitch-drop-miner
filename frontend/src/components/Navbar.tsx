@@ -17,8 +17,10 @@ interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ onOpenSettings, onOpenTwitchAuth }) => {
-  const { user, twitchAccount, logout } = useAuth();
+  const { user, twitchAccount, twitchAccounts, logout } = useAuth();
   const { isConnected } = useWebSocket();
+
+  const totalAccounts = twitchAccounts.length > 0 ? twitchAccounts.length : (twitchAccount?.connected ? 1 : 0);
 
   return (
     <header className="sticky top-0 z-30 border-b border-slate-800/80 bg-slate-900/90 backdrop-blur-md">
@@ -56,13 +58,17 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSettings, onOpenTwitchAuth
           </div>
 
           {/* Twitch Account Pill / Connect Button */}
-          {twitchAccount?.connected ? (
+          {totalAccounts > 0 ? (
             <button
               onClick={onOpenTwitchAuth}
               className="flex items-center space-x-2 px-3 py-1.5 rounded-lg text-xs font-medium bg-purple-950/50 hover:bg-purple-900/50 text-purple-300 border border-purple-500/30 transition-colors"
             >
               <CheckCircle2 className="w-4 h-4 text-purple-400" />
-              <span>@{twitchAccount.twitch_username}</span>
+              <span>
+                {totalAccounts === 1
+                  ? `@${twitchAccounts[0]?.twitch_username || twitchAccount?.twitch_username}`
+                  : `${totalAccounts} Accounts Active`}
+              </span>
             </button>
           ) : (
             <button

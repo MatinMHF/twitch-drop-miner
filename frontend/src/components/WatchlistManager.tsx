@@ -14,6 +14,7 @@ import {
   Power,
   Download,
   Upload,
+  GripVertical,
 } from 'lucide-react';
 
 interface WatchlistManagerProps {
@@ -24,10 +25,45 @@ export const WatchlistManager: React.FC<WatchlistManagerProps> = ({ onWatchlistC
   const [items, setItems] = useState<WatchlistItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<GameSearchResult[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSearching, setIsSearching] = useState(false);
   const [isBackingUp, setIsBackingUp] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const autoScrollIntervalRef = useRef<number | null>(null);
+
+  const stopAutoScroll = () => {
+    if (autoScrollIntervalRef.current) {
+      clearInterval(autoScrollIntervalRef.current);
+      autoScrollIntervalRef.current = null;
+    }
+  };
+
+  const handleAutoScroll = (clientY: number) => {
+    const edgeThreshold = 120; // Distance from viewport top/bottom to trigger scroll
+    const scrollSpeed = 16; // Pixels per tick
+
+    const viewportHeight = window.innerHeight;
+
+    if (clientY < edgeThreshold) {
+      // Near top of window
+      if (!autoScrollIntervalRef.current) {
+        autoScrollIntervalRef.current = window.setInterval(() => {
+          window.scrollBy({ top: -scrollSpeed, behavior: 'auto' });
+        }, 16);
+      }
+    } else if (clientY > viewportHeight - edgeThreshold) {
+      // Near bottom of window
+      if (!autoScrollIntervalRef.current) {
+        autoScrollIntervalRef.current = window.setInterval(() => {
+          window.scrollBy({ top: scrollSpeed, behavior: 'auto' });
+        }, 16);
+      }
+    } else {
+      stopAutoScroll();
+    }
+  };
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const searchContainerRef = useRef<HTMLDivElement>(null);
@@ -143,6 +179,53 @@ export const WatchlistManager: React.FC<WatchlistManagerProps> = ({ onWatchlistC
       console.error('Failed to save priority order', err);
       await fetchWatchlist();
     }
+  };
+
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    // set drag payload
+    e.dataTransfer.setData('text/plain', `${index}`);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragOverIndex !== index) {
+      setDragOverIndex(index);
+    }
+    handleAutoScroll(e.clientY);
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetIndex: number) => {
+    e.preventDefault();
+    stopAutoScroll();
+    setDragOverIndex(null);
+    if (draggedIndex === null || draggedIndex === targetIndex) {
+      setDraggedIndex(null);
+      return;
+    }
+
+    const newItems = [...items];
+    const [draggedItem] = newItems.splice(draggedIndex, 1);
+    newItems.splice(targetIndex, 0, draggedItem);
+
+    // Update priorities locally
+    setItems(newItems);
+    setDraggedIndex(null);
+
+    try {
+      await api.reorderWatchlist(newItems.map((i) => i.game_id));
+    } catch (err: any) {
+      console.error('Failed to save drag-and-drop priority order', err);
+      await fetchWatchlist();
+    }
+  };
+
+  const handleDragEnd = () => {
+    stopAutoScroll();
+    setDraggedIndex(null);
+    setDragOverIndex(null);
   };
 
   const handleBackup = async () => {
@@ -380,14 +463,30 @@ export const WatchlistManager: React.FC<WatchlistManagerProps> = ({ onWatchlistC
           items.map((item, index) => (
             <div
               key={item.game_id}
-              className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
-                item.is_currently_mining
+              draggable
+              onDragStart={(e) => handleDragStart(e, index)}
+              onDragOver={(e) => handleDragOver(e, index)}
+              onDrop={(e) => handleDrop(e, index)}
+              onDragEnd={handleDragEnd}
+              className={`flex items-center justify-between p-3 rounded-xl border transition-all cursor-grab active:cursor-grabbing select-none ${
+                draggedIndex === index
+                  ? 'opacity-40 scale-[0.98] border-dashed border-purple-400 bg-purple-950/20'
+                  : dragOverIndex === index
+                  ? 'border-purple-400 border-2 bg-purple-950/40 shadow-lg shadow-purple-500/10'
+                  : item.is_currently_mining
                   ? 'bg-purple-950/30 border-purple-500/50 shadow-md shadow-purple-500/5'
                   : 'bg-slate-950/40 border-slate-800/80 hover:border-slate-700'
               }`}
             >
               {/* Game Info */}
               <div className="flex items-center space-x-3 min-w-0">
+                <span
+                  className="text-slate-500 hover:text-slate-300 p-0.5 cursor-grab active:cursor-grabbing"
+                  title="Drag to reorder priority"
+                >
+                  <GripVertical className="w-4 h-4" />
+                </span>
+
                 <span className="text-xs font-mono font-bold text-slate-500 w-4 text-center">
                   #{index + 1}
                 </span>

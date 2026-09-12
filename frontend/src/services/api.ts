@@ -1,6 +1,7 @@
 import {
   UserProfile,
   TwitchAccount,
+  MultiTwitchAccounts,
   DeviceCodeInit,
   DeviceCodeStatus,
   GameSearchResult,
@@ -77,7 +78,12 @@ export const api = {
 
   // Twitch Account & Device Flow
   getTwitchAccount: () => request<TwitchAccount>('/api/auth/twitch/account'),
-  disconnectTwitch: () => request<{ message: string }>('/api/auth/twitch/account', { method: 'DELETE' }),
+  getAllTwitchAccounts: () => request<MultiTwitchAccounts>('/api/auth/twitch/accounts'),
+  disconnectTwitch: (accountId?: string) =>
+    request<{ message: string }>(
+      accountId ? `/api/auth/twitch/account?account_id=${encodeURIComponent(accountId)}` : '/api/auth/twitch/account',
+      { method: 'DELETE' }
+    ),
   initDeviceCode: () => request<DeviceCodeInit>('/api/auth/twitch/device-code/init', { method: 'POST' }),
   checkDeviceCodeStatus: (deviceCode: string) =>
     request<DeviceCodeStatus>(`/api/auth/twitch/device-code/status?device_code=${encodeURIComponent(deviceCode)}`),

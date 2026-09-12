@@ -61,24 +61,30 @@ class ActiveMiningTarget(BaseModel):
     channel: Optional[ChannelStreamInfo] = None
 
 
-class MinerStatusResponse(BaseModel):
-    state: str  # "IDLE", "MINING", "PAUSED", "ERROR", "NO_ACCOUNT"
-    active_targets: List[ActiveMiningTarget] = []
-    active_game_id: Optional[str] = None
-    active_game_name: Optional[str] = None
-    active_campaign_id: Optional[str] = None
-    active_campaign_name: Optional[str] = None
-    active_channel: Optional[ChannelStreamInfo] = None
-    current_drop_id: Optional[str] = None
-    current_drop_name: Optional[str] = None
-    current_drop_progress_percent: float = 0.0
-    current_drop_minutes_watched: int = 0
-    current_drop_required_minutes: int = 0
-    total_drops_claimed_session: int = 0
-    last_heartbeat_at: Optional[datetime] = None
-    next_poll_at: Optional[datetime] = None
+class MinerAccountStatus(BaseModel):
+    account_id: str
+    twitch_user_id: str
+    twitch_username: str
+    is_running: bool
+    is_paused: bool
     error_message: Optional[str] = None
+    status_text: str = "Idle"
+    active_channel: Optional[Dict[str, Any]] = None
+    active_drop: Optional[Dict[str, Any]] = None
+    next_poll_at: Optional[str] = None
+
+
+class MinerStatusResponse(BaseModel):
+    state: str = "IDLE"  # "IDLE", "MINING", "PAUSED", "ERROR", "NO_ACCOUNT"
+    is_running: bool = False
     is_paused: bool = False
+    status_text: str = "Idle"
+    error_message: Optional[str] = None
+    active_channel: Optional[Dict[str, Any]] = None
+    active_drop: Optional[Dict[str, Any]] = None
+    next_poll_at: Optional[str] = None
+    accounts_count: int = 0
+    accounts: List[MinerAccountStatus] = []
 
 
 class ClaimedDropResponse(BaseModel):

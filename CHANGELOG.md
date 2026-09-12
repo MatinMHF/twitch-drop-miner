@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-09-12
+
+### Added
+- **Multi-Account Concurrent Mining**:
+  - Connect multiple Twitch accounts simultaneously via OAuth 2.0 Device Code Flow.
+  - Multi-instance DevilXD engine manager (`MultiAccountMiningManager`) running parallel watch loops, WebSocket PubSub clients, and drop claimers.
+  - Per-account cookie jar isolation (`cookies_<user_id>.jar`) preventing session collisions across connected accounts.
+  - Multi-account management modal with individual account disconnect and "Add Another Account" flow.
+  - Live parallel account execution status cards on the dashboard.
+- **Interactive Drag-and-Drop Priority Watchlist**:
+  - Reorder game priority by directly dragging game cards up and down with dedicated visual grip handle.
+  - Viewport edge auto-scrolling: smoothly scrolls the page when dragging near top or bottom edges to easily manage large watchlists.
+
+### Fixed
+- **Docker Frontend Build**:
+  - Switched frontend builder to `node:20-slim` to resolve libc / musl binary compatibility during Vite/Rollup production compilation.
+  - Resolved `MultiAccountMiningManager` attribute compatibility in `list_watchlist` API.
+
 ## [1.1.0] - 2026-09-08
 
 ### Fixed

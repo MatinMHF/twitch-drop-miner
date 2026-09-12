@@ -5,6 +5,7 @@ import { UserProfile, TwitchAccount } from '../services/types';
 interface AuthContextType {
   user: UserProfile | null;
   twitchAccount: TwitchAccount | null;
+  twitchAccounts: TwitchAccount[];
   isLoading: boolean;
   login: (data: { username: string; password: string }) => Promise<void>;
   setupAdmin: (data: { username: string; password: string }) => Promise<void>;
@@ -17,6 +18,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [twitchAccount, setTwitchAccount] = useState<TwitchAccount | null>(null);
+  const [twitchAccounts, setTwitchAccounts] = useState<TwitchAccount[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const fetchAuth = async () => {
@@ -24,8 +26,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const authStatus = await api.getAuthStatus();
       setUser(authStatus);
       if (authStatus.is_active) {
-        const tw = await api.getTwitchAccount();
+        const [tw, twList] = await Promise.all([
+          api.getTwitchAccount(),
+          api.getAllTwitchAccounts().catch(() => ({ accounts: [], total_connected: 0 })),
+        ]);
         setTwitchAccount(tw);
+        setTwitchAccounts(twList.accounts || []);
       }
     } catch {
       setUser(null);
@@ -52,14 +58,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await api.logout();
     setUser(null);
     setTwitchAccount(null);
+    setTwitchAccounts([]);
   };
 
   const refreshTwitchAccount = async () => {
     try {
-      const tw = await api.getTwitchAccount();
+      const [tw, twList] = await Promise.all([
+        api.getTwitchAccount(),
+        api.getAllTwitchAccounts().catch(() => ({ accounts: [], total_connected: 0 })),
+      ]);
       setTwitchAccount(tw);
+      setTwitchAccounts(twList.accounts || []);
     } catch {
       setTwitchAccount(null);
+      setTwitchAccounts([]);
     }
   };
 
@@ -68,6 +80,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       value={{
         user,
         twitchAccount,
+        twitchAccounts,
         isLoading,
         login,
         setupAdmin,

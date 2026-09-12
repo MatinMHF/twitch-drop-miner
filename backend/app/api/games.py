@@ -131,7 +131,12 @@ async def list_watchlist(
                 active_campaigns_count=camp_count,
                 active_drops_count=drop_count,
                 is_completed=is_completed,
-                is_currently_mining=(item.game_id == current_game_id or g_key == str(status.get("active_game_name", "")).lower()),
+                is_currently_mining=(
+            item.game_id == current_game_id 
+            or g_key == str(status.get("active_game_name", "")).lower()
+            or (status.get("active_channel") and g_key == str(status["active_channel"].get("game_name", "")).lower())
+            or (status.get("active_drop") and g_key == str(status["active_drop"].get("game_name", "")).lower())
+        ),
             )
         )
     return res

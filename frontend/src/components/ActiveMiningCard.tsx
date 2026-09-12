@@ -27,20 +27,21 @@ export const ActiveMiningCard: React.FC = () => {
     }
   };
 
-  const isMining = status?.state === 'MINING';
-  const isPaused = status?.state === 'PAUSED';
+  const isMining = status?.state === 'MINING' || status?.is_running;
+  const isPaused = status?.state === 'PAUSED' || status?.is_paused;
+  const accounts = status?.accounts || [];
   const targets = status?.active_targets && status.active_targets.length > 0
     ? status.active_targets
-    : (status?.active_game_name ? [{
-        game_id: status.active_game_id || '',
-        game_name: status.active_game_name || 'Watchlisted Game',
-        campaign_id: status.active_campaign_id || '',
-        campaign_name: status.active_campaign_name || 'Drop Campaign',
-        drop_id: status.current_drop_id || '',
-        drop_name: status.current_drop_name || 'Drop Reward',
-        required_minutes: status.current_drop_required_minutes || 60,
-        current_minutes: status.current_drop_minutes_watched || 0,
-        progress_percent: status.current_drop_progress_percent || 0,
+    : (status?.active_drop ? [{
+        game_id: status.active_drop.game_id || '',
+        game_name: status.active_drop.game_name || 'Watchlisted Game',
+        campaign_id: status.active_drop.campaign_id || '',
+        campaign_name: status.active_drop.campaign_name || 'Drop Campaign',
+        drop_id: status.active_drop.drop_id || '',
+        drop_name: status.active_drop.drop_name || 'Drop Reward',
+        required_minutes: status.active_drop.required_minutes || 60,
+        current_minutes: status.active_drop.current_minutes || 0,
+        progress_percent: status.active_drop.progress_percentage || 0,
         channel: status.active_channel,
       }] : []);
 
@@ -131,6 +132,39 @@ export const ActiveMiningCard: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Multi-Account Status Overview if > 1 account */}
+      {accounts.length > 1 && (
+        <div className="mt-6 p-4 bg-slate-950/60 border border-slate-800 rounded-xl space-y-3">
+          <div className="text-xs font-semibold text-slate-300 flex items-center justify-between">
+            <span>Concurrent Mining Accounts ({accounts.length})</span>
+            <span className="text-emerald-400 text-[11px] font-mono">Parallel Execution</span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {accounts.map((acc: any) => (
+              <div
+                key={acc.account_id}
+                className="p-3 bg-slate-900 border border-slate-800/80 rounded-lg flex items-center justify-between text-xs"
+              >
+                <div>
+                  <div className="font-bold text-white flex items-center space-x-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span>@{acc.twitch_username}</span>
+                  </div>
+                  <div className="text-[11px] text-slate-400 mt-0.5">
+                    {acc.active_drop?.drop_name ? `${acc.active_drop.drop_name} (${acc.active_drop.progress_percentage}%)` : acc.status_text || 'Idle'}
+                  </div>
+                </div>
+                {acc.active_channel?.channel_display_name && (
+                  <span className="text-[10px] bg-purple-500/10 text-purple-300 px-2 py-0.5 rounded border border-purple-500/20">
+                    {acc.active_channel.channel_display_name}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Active Targets List */}
       {isMining && targets.length > 0 ? (

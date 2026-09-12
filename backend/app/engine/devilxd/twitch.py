@@ -460,6 +460,10 @@ class Twitch:
         # Maintenance task
         self._mnt_task: asyncio.Task[None] | None = None
 
+    @property
+    def _cookie_path(self) -> Path:
+        return getattr(self.settings, "cookie_path", None) or COOKIES_PATH
+
     async def get_session(self) -> aiohttp.ClientSession:
         if (session := self._session) is not None:
             if session.closed:
@@ -468,8 +472,8 @@ class Twitch:
         # load in cookies
         cookie_jar = aiohttp.CookieJar()
         try:
-            if COOKIES_PATH.exists():
-                cookie_jar.load(COOKIES_PATH)
+            if self._cookie_path.exists():
+                cookie_jar.load(self._cookie_path)
         except Exception:
             # if loading in the cookies file ends up in an error, just ignore it
             # clear the jar, just in case
@@ -514,7 +518,7 @@ class Twitch:
             for cookie_key, cookie in list(cookie_jar._cookies.items()):
                 if not cookie:
                     del cookie_jar._cookies[cookie_key]
-            cookie_jar.save(COOKIES_PATH)
+            cookie_jar.save(self._cookie_path)
             await self._session.close()
             self._session = None
         self._drops.clear()

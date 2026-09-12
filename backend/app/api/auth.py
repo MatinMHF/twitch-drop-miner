@@ -23,6 +23,7 @@ from app.db.repositories import (
     create_user,
     delete_twitch_account,
     get_active_twitch_account,
+    get_all_active_twitch_accounts,
     get_user_by_id,
     get_user_by_username,
 )
@@ -35,6 +36,7 @@ from app.schemas.auth import (
     SetupAdminRequest,
     TokenResponse,
     TwitchAccountResponse,
+    MultiTwitchAccountsResponse,
     UserProfileResponse,
 )
 
@@ -317,11 +319,12 @@ async def get_twitch_account_status(
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
-    """Get active connected Twitch account info."""
+    """Get primary connected Twitch account info."""
     account = await get_active_twitch_account(db)
     if account:
         return TwitchAccountResponse(
             connected=True,
+            account_id=account.id,
             twitch_user_id=account.twitch_user_id,
             twitch_username=account.twitch_username,
             connected_at=account.created_at,
@@ -329,15 +332,42 @@ async def get_twitch_account_status(
     return TwitchAccountResponse(connected=False)
 
 
-@router.delete("/twitch/account")
-async def disconnect_twitch_account(
+@router.get("/twitch/accounts", response_model=MultiTwitchAccountsResponse)
+async def get_all_twitch_accounts_status(
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
-    """Disconnect and revoke stored Twitch account."""
-    account = await get_active_twitch_account(db)
-    if account:
-        await delete_twitch_account(db, account.id)
+    """Get all connected active Twitch accounts."""
+    accounts = await get_all_active_twitch_accounts(db)
+    result = [
+        TwitchAccountResponse(
+            connected=True,
+            account_id=acc.id,
+            twitch_user_id=acc.twitch_user_id,
+            twitch_username=acc.twitch_username,
+            connected_at=acc.created_at,
+        )
+        for acc in accounts
+    ]
+    return MultiTwitchAccountsResponse(accounts=result, total_connected=len(result))
+
+
+@router.delete("/twitch/account")
+async def disconnect_twitch_account(
+    account_id: Optional[str] = None,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """Disconnect and revoke stored Twitch account (all or targeted by ID)."""
+    if account_id:
+        await delete_twitch_account(db, account_id)
+        await miner_service.stop(account_id=account_id)
+        return {"message": f"Twitch account {account_id} disconnected successfully"}
+
+    accounts = await get_all_active_twitch_accounts(db)
+    if accounts:
+        for acc in accounts:
+            await delete_twitch_account(db, acc.id)
         await miner_service.stop()
-        return {"message": "Twitch account disconnected successfully"}
+        return {"message": "All Twitch accounts disconnected successfully"}
     return {"message": "No connected Twitch account found"}
