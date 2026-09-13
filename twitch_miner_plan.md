@@ -177,6 +177,16 @@ twitch-drop-miner/
   - Excluded expired/historical in-progress campaigns from active drop calculations.
   - Accurately calculate earnable drop counts by checking `can_earn()` and `is_claimed` states.
   - Implemented `is_completed` flag and `All Drops Claimed` UI badges to prevent false positive active drop indications.
+- [x] **Multi-Account Concurrent Mining Engine (v1.2.0)**:
+  - Upgraded core architecture from single-worker to `MultiAccountMiningManager`, orchestrating N independent `SingleAccountWorker` instances in parallel.
+  - Implemented per-account isolated cookie storage (`cookies_<user_id>.jar`) preventing token/session collisions across multiple accounts.
+  - Added multi-account REST API surface (`GET /api/auth/twitch/accounts`, targeted `DELETE /api/auth/twitch/account?account_id=...`).
+  - Added dedicated multi-account authentication modal with "Add Another Account" flow and per-account disconnect controls without wiping existing sessions.
+  - Dashboard multi-account live overview card tracking parallel execution state for all connected accounts.
+- [x] **Interactive Drag-and-Drop & Auto-Scroll (v1.2.0)**:
+  - Implemented native HTML5 Drag-and-Drop reordering for watchlist priority with visual drag grip handles (`GripVertical`).
+  - Implemented viewport edge auto-scrolling with threshold detection (120px) to smoothly navigate large watchlists during drag operations.
+  - Live persistence to SQLite database and real-time synchronization with mining workers.
 - [x] **Testing & Verification**: 100% test pass rate across all API, crypto, security, and constants test suites.
 
 ---
