@@ -85,8 +85,17 @@ async def list_watchlist(
     earnable_drop_counts: dict[str, int] = {}
     completed_games: set[str] = set()
 
-    if miner_service.twitch and hasattr(miner_service.twitch, "inventory") and miner_service.twitch.inventory:
-        for c in miner_service.twitch.inventory:
+    # Collect inventories from all active workers (or legacy single twitch instance)
+    inventories = []
+    if hasattr(miner_service, "workers") and miner_service.workers:
+        for w in miner_service.workers.values():
+            if w.twitch and hasattr(w.twitch, "inventory") and w.twitch.inventory:
+                inventories.append(w.twitch.inventory)
+    elif miner_service.twitch and hasattr(miner_service.twitch, "inventory") and miner_service.twitch.inventory:
+        inventories.append(miner_service.twitch.inventory)
+
+    for inv in inventories:
+        for c in inv:
             # Exclude non-active or expired campaigns
             if not getattr(c, "active", False) or getattr(c, "expired", False):
                 continue
@@ -101,7 +110,10 @@ async def list_watchlist(
                 if not getattr(d, "is_claimed", False):
                     can_earn_fn = getattr(d, "_base_can_earn", None)
                     if callable(can_earn_fn):
-                        if can_earn_fn():
+                        try:
+                            if can_earn_fn():
+                                earnable += 1
+                        except Exception:
                             earnable += 1
                     else:
                         earnable += 1
@@ -115,9 +127,31 @@ async def list_watchlist(
     res = []
     for item in items:
         g_key = item.game_name.lower()
-        camp_count = active_game_names.get(g_key, 0)
-        drop_count = earnable_drop_counts.get(g_key, 0)
-        is_completed = (drop_count == 0 and camp_count == 0 and g_key in completed_games)
+        camp_count = int(active_game_names.get(g_key, 0))
+        drop_count = int(earnable_drop_counts.get(g_key, 0))
+        is_completed = bool(drop_count == 0 and camp_count == 0 and g_key in completed_games)
+
+        # Check if currently mining across any account/worker
+        is_mining = False
+        if current_game_id and item.game_id == current_game_id:
+            is_mining = True
+        elif status.get("active_game_name") and g_key == str(status.get("active_game_name")).lower():
+            is_mining = True
+        elif status.get("active_channel") and g_key == str(status["active_channel"].get("game_name", "")).lower():
+            is_mining = True
+        elif status.get("active_drop") and g_key == str(status["active_drop"].get("game_name", "")).lower():
+            is_mining = True
+        elif status.get("accounts"):
+            for acc in status["accounts"]:
+                acc_channel = acc.get("active_channel")
+                acc_drop = acc.get("active_drop")
+                if acc_channel and g_key == str(acc_channel.get("game_name", "")).lower():
+                    is_mining = True
+                    break
+                if acc_drop and g_key == str(acc_drop.get("game_name", "")).lower():
+                    is_mining = True
+                    break
+
         res.append(
             WatchlistItemResponse(
                 id=item.id,
@@ -131,12 +165,7 @@ async def list_watchlist(
                 active_campaigns_count=camp_count,
                 active_drops_count=drop_count,
                 is_completed=is_completed,
-                is_currently_mining=(
-            item.game_id == current_game_id 
-            or g_key == str(status.get("active_game_name", "")).lower()
-            or (status.get("active_channel") and g_key == str(status["active_channel"].get("game_name", "")).lower())
-            or (status.get("active_drop") and g_key == str(status["active_drop"].get("game_name", "")).lower())
-        ),
+                is_currently_mining=bool(is_mining),
             )
         )
     return res
