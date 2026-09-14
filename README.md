@@ -1,24 +1,46 @@
-# 🎮 Twitch Drop Miner
-
 <div align="center">
 
-[![CI Pipeline](https://github.com/MatinMHF/twitch-drop-miner/actions/workflows/ci.yml/badge.svg)](https://github.com/MatinMHF/twitch-drop-miner/actions/workflows/ci.yml)
-[![Latest Release](https://img.shields.io/github/v/release/MatinMHF/twitch-drop-miner?color=blue&logo=github)](https://github.com/MatinMHF/twitch-drop-miner/releases)
-[![Docker](https://img.shields.io/badge/Docker-Multi--Stage-blue?logo=docker)](https://www.docker.com/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688?logo=fastapi)](https://fastapi.tiangolo.com/)
-[![React](https://img.shields.io/badge/React-18-61DAFB?logo=react)](https://react.dev/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-38B2AC?logo=tailwind-css)](https://tailwindcss.com/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+<p align="center">
+  <img src="assets/hero-banner.svg" alt="Twitch Drop Miner Banner" width="100%" />
+</p>
 
-A modern, standalone, self-hosted web service for automatic Twitch Drop mining. Built 100% from scratch with a clean-room architecture.
+# 🎮 Twitch Drop Miner
 
-[Features](#-key-features) • [Quick Start](#-quick-start-with-docker) • [Architecture](#-architecture) • [Configuration](#%EF%B8%8F-configuration--constants) • [Security](#-security-model) • [Contributing](#-contributing)
+<p align="center">
+  <a href="https://github.com/MatinMHF/twitch-drop-miner/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/MatinMHF/twitch-drop-miner/ci.yml?style=for-the-badge&logo=githubactions&logoColor=white&label=CI%20Build" alt="CI Status" /></a>
+  <a href="https://github.com/MatinMHF/twitch-drop-miner/releases"><img src="https://img.shields.io/github/v/release/MatinMHF/twitch-drop-miner?style=for-the-badge&color=9333ea&logo=github&logoColor=white" alt="Latest Release" /></a>
+  <a href="https://www.docker.com/"><img src="https://img.shields.io/badge/Docker-Containerized-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker" /></a>
+  <a href="https://fastapi.tiangolo.com/"><img src="https://img.shields.io/badge/FastAPI-0.110+-009688?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI" /></a>
+  <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-F59E0B?style=for-the-badge" alt="License: MIT" /></a>
+</p>
+
+<p align="center">
+  <a href="https://git.io/typing-svg">
+    <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=18&duration=2800&pause=1200&color=A855F7&center=true&vCenter=true&width=650&lines=24%2F7+Automated+Twitch+Drop+Claiming;Concurrent+Multi-Account+Mining+Engine;Zero-Bandwidth+Headless+Stream+Emulation;Native+Drag-and-Drop+Priority+Watchlist;AES-256-GCM+Encrypted+Token+Security" alt="Typing Features" />
+  </a>
+</p>
+
+<p align="center">
+  A modern, production-grade, self-hosted web service for automatic Twitch Drop mining.<br/>
+  Emulates viewer telemetry via lightweight GraphQL heartbeats without streaming video or audio.
+</p>
+
+<p align="center">
+  <a href="#-key-features"><b>Features</b></a> •
+  <a href="#-quick-start-with-docker"><b>Quick Start</b></a> •
+  <a href="#-updating-to-the-latest-version"><b>Updating</b></a> •
+  <a href="#-architecture"><b>Architecture</b></a> •
+  <a href="#%EF%B8%8F-configuration--constants"><b>Configuration</b></a> •
+  <a href="#-security-model"><b>Security</b></a> •
+  <a href="#-contributing"><b>Contributing</b></a>
+</p>
 
 </div>
 
 ---
 
-## 📸 Dashboard Preview
+## 📸 Interactive Dashboard Preview
 
 ```text
 +-----------------------------------------------------------------------------------+
@@ -46,44 +68,16 @@ A modern, standalone, self-hosted web service for automatic Twitch Drop mining. 
 
 ## ✨ Key Features
 
-- 👥 **Multi-Account Concurrent Mining**: Connect multiple Twitch accounts simultaneously via OAuth 2.0 Device Code Flow. Each account runs an isolated background engine with independent cookie jars (`cookies_<user_id>.jar`), telemetry watch loops, and drop claimers in parallel.
-- 🔒 **Twitch OAuth 2.0 Device Flow**: Authenticate seamlessly using standard TV/Console device activation codes (`twitch.tv/activate`). No passwords, no 2FA credentials entered, and zero brittle browser automation (Puppeteer/Selenium).
-- ⚡ **Headless Zero-Bandwidth Mining**: Emulates minute-watched viewing events directly via Twitch GraphQL and Spade telemetry without downloading video or audio streams (saves ~99.9% bandwidth, using ~1KB/min).
-- 🎯 **Interactive Drag-and-Drop Watchlist**: Reorder game priority by directly dragging game cards up and down with dedicated visual handles (`GripVertical`), plus automatic viewport edge scrolling when dragging near top/bottom screen edges.
-- 📊 **Accurate Drop Availability & Completion Detection**: Evaluates campaign time windows, preconditions, and claimed benefits in real-time. Distinguishes between earnable drops, completed campaigns (`All Drops Claimed`), and games waiting for future drops.
-- 🔍 **Dynamic Game & Campaign Discovery**: Queries Twitch APIs directly to search games and discover active/upcoming drop events.
-- 🔄 **Smart Streamer Failover**: Detects when a current streamer goes offline and automatically switches to the next top eligible streamer broadcasting the same game with drops enabled.
-- 🎁 **Automated Reward Claiming**: Automatically triggers `ClaimDropMutation` as soon as drops reach 100% and records full claiming history in SQLite.
-- 🛡️ **Hardened Security**:
-  - OAuth access and refresh tokens are encrypted at rest using **AES-256-GCM**.
-  - Admin login secured with **bcrypt** hashing.
-  - Short-lived JWT access tokens with rotating refresh cookies.
-  - Sliding-window rate limiting on sensitive routes.
-  - CSRF protection and sanitized log streams that mask secrets.
-- ⚙️ **Configurable Constants Registry**: Centralized storage for Spade endpoints and Twitch GraphQL persisted query hashes (with full `.env` override capability).
-- 📱 **Modern Responsive UI**: Built with React 18, Vite, TypeScript, and Tailwind CSS with full dark/light theme support and real-time WebSocket telemetry.
-
----
-
-## 🏗 Architecture
-
-```mermaid
-graph TD
-    User([Browser Client]) <-->|HTTPS / WSS| FastAPI[FastAPI Web & API Server]
-    
-    subgraph Docker Container
-        FastAPI --> Auth[Auth & Rate Limiter<br/>JWT + Refresh + CSRF]
-        FastAPI --> DB[(SQLite Database<br/>AES-256 Encrypted Tokens)]
-        FastAPI --> MiningService[Mining Engine & Scheduler]
-        
-        MiningService --> GQLClient[Twitch GQL Client]
-        MiningService --> SpadeTracker[Spade Minute Watcher]
-        MiningService --> QueryRegistry[Twitch Persisted Query Registry]
-    end
-
-    GQLClient <-->|GQL Queries & Claims| TwitchGQL[Twitch GraphQL API]
-    SpadeTracker <-->|Heartbeats| TwitchSpade[Twitch Spade Telemetry]
-```
+| Capability | Technical Implementation | Value |
+| :--- | :--- | :--- |
+| 👥 **Multi-Account Mining** | `MultiAccountMiningManager` orchestrates N isolated workers with per-account cookie jars (`cookies_<user_id>.jar`) | Mine and claim drops across multiple accounts simultaneously without session collisions. |
+| ⚡ **Zero-Bandwidth Engine** | Emulates minute-watched telemetry via Twitch GQL & Spade API (no video/audio downloaded) | Consumes only ~1-2 KB/min (~80MB RAM), saving over 99.9% network bandwidth. |
+| 🔒 **Twitch Device OAuth 2.0** | Official TV/Console Device Code Grant (`twitch.tv/activate`) with activation code & QR | Zero Twitch passwords or 2FA credentials handled; no brittle browser automation needed. |
+| 🎯 **Drag-and-Drop Watchlist** | HTML5 drag-and-drop with visual grab handles (`GripVertical`) and viewport edge auto-scroll | Effortlessly reorder game priorities even in massive watchlists (30+ games). |
+| 📊 **Accurate Drop Availability** | Evaluates real-time preconditions, campaign time windows, and claimed benefits | Accurately labels games as `All Drops Claimed`, `Active Drops`, or `Waiting`. |
+| 🔄 **Streamer Failover** | Continually monitors active broadcaster status and auto-discovers drop-enabled streams | Automatically switches to another live streamer if current channel goes offline. |
+| 🎁 **Instant Auto-Claim** | Real-time Twitch PubSub WebSocket events trigger `ClaimDropMutation` within milliseconds | Chained drops start progressing immediately without missing time windows. |
+| 🛡️ **Military-Grade Security** | AES-256-GCM token encryption at rest, bcrypt password hashing, rotating JWT refresh cookies | Complete peace of mind for self-hosting on any server or VPS. |
 
 ---
 
@@ -109,23 +103,20 @@ docker compose up -d --build
 Open your browser at:
 👉 **`http://localhost:8080`**
 
-On first launch, follow the initial setup wizard to create your admin username and password.
+*On first launch, follow the initial setup wizard to create your master administrator credentials.*
 
 ---
 
 ## 🔄 Updating to the Latest Version
 
-To update an existing installation without losing your settings, database, or tokens:
+To update an existing deployment without losing your database, tokens, or custom settings:
 
-### Quick Update Script
+### Automated Script:
 ```bash
 # Linux / macOS
-chmod +x update.sh
-./update.sh
-```
+chmod +x update.sh && ./update.sh
 
-```cmd
-:: Windows
+# Windows
 update.bat
 ```
 
@@ -138,7 +129,39 @@ docker compose up -d --build
 
 ---
 
-## ⚙️ Configuration & Constants
+<details>
+<summary><b>🏗 Click to Expand System Architecture &amp; Data Flow</b></summary>
+<br/>
+
+```mermaid
+graph TD
+    User([Browser Client]) <-->|HTTPS / WSS| FastAPI[FastAPI Web & API Server]
+    
+    subgraph Docker Container
+        FastAPI --> Auth[Auth & Rate Limiter<br/>JWT + Refresh + CSRF]
+        FastAPI --> DB[(SQLite Database<br/>AES-256 Encrypted Tokens)]
+        FastAPI --> MiningService[Multi-Account Mining Coordinator]
+        
+        MiningService --> Worker1[Worker Account #1<br/>cookies_user1.jar]
+        MiningService --> Worker2[Worker Account #N<br/>cookies_userN.jar]
+        
+        Worker1 --> GQLClient[Twitch GQL Client]
+        Worker1 --> SpadeTracker[Spade Minute Watcher]
+        Worker2 --> GQLClient
+        Worker2 --> SpadeTracker
+    end
+
+    GQLClient <-->|GQL Queries & Claims| TwitchGQL[Twitch GraphQL API]
+    SpadeTracker <-->|Heartbeats| TwitchSpade[Twitch Spade Telemetry]
+```
+
+</details>
+
+---
+
+<details>
+<summary><b>⚙️ Click to Expand Configuration &amp; Persisted Query Registry</b></summary>
+<br/>
 
 All Twitch GraphQL Persisted Query Hashes and endpoints are centralized in `backend/app/core/twitch_constants.py`. When Twitch modifies their GQL schema, you can hotfix hashes directly in `.env` without altering code:
 
@@ -157,11 +180,15 @@ All Twitch GraphQL Persisted Query Hashes and endpoints are centralized in `back
 | `TWITCH_HASH_DIRECTORY_GAME` | `86bcceb...` | SHA-256 hash for game directory channel list query |
 | `TWITCH_HASH_PLAYBACK_ACCESS_TOKEN` | `ed230aa...` | SHA-256 hash for stream playback access token query |
 
+</details>
+
 ---
 
-## 🛠️ Bare-Metal Installation
+<details>
+<summary><b>🛠️ Click to Expand Bare-Metal Local Development Setup</b></summary>
+<br/>
 
-### Backend
+### Backend Setup
 ```bash
 cd backend
 python -m venv .venv
@@ -170,19 +197,21 @@ pip install -r requirements.txt
 python -m uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
 ```
 
-### Frontend
+### Frontend Setup
 ```bash
 cd frontend
 npm install
-npm run build # builds static SPA into backend/static
+npm run build # Builds production SPA into backend/static
 # Or run live dev server:
 npm run dev
 ```
 
-### Running Tests
+### Run Tests
 ```bash
 PYTHONPATH=backend pytest backend/tests
 ```
+
+</details>
 
 ---
 
@@ -195,7 +224,9 @@ PYTHONPATH=backend pytest backend/tests
 
 ---
 
-## 🗑️ Uninstallation
+<details>
+<summary><b>🗑️ Click to Expand Uninstallation Guide</b></summary>
+<br/>
 
 To completely tear down the service and remove all containers, images, and data:
 
@@ -209,6 +240,8 @@ rm -rf twitch-drop-miner
 > [!WARNING]
 > Passing the `-v` flag removes the persistent Docker data volume (`./data`). This permanently deletes your SQLite database, settings, game watchlist, and encrypted Twitch OAuth tokens.
 
+</details>
+
 ---
 
 ## 🤝 Contributing
@@ -220,4 +253,3 @@ Contributions are welcome! Please review [CONTRIBUTING.md](CONTRIBUTING.md) for 
 ## 📄 License
 
 This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
-
