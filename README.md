@@ -22,24 +22,23 @@ A modern, standalone, self-hosted web service for automatic Twitch Drop mining. 
 
 ```text
 +-----------------------------------------------------------------------------------+
-|  [Tv] Twitch Drop Miner  v1.1.0      (•) Telemetry Live   [@MatinMHF]  [⚙] [🌙] [🚪] |
+|  [Tv] Twitch Drop Miner  v1.2.1      (•) Telemetry Live   [2 Accounts Active] [⚙] |
 +-----------------------------------------------------------------------------------+
-|  [ Status: MINING ]  [ Claimed: 26 ]  [ Watchlist: 7 ]  [ Bandwidth Saved: 99.9% ]|
+|  [ Status: MINING ]  [ Claimed: 26 ]  [ Watchlist: 33 ]  [ Bandwidth Saved: 99.9% ]|
 +-----------------------------------------------------------------------------------+
-|  ACTIVE MINING OPERATION                                                          |
-|  Channel: @nmplol (Live) [7.4k viewers]                                           |
-|  Reward: GTA$1M (nopixel V Campaign)                                              |
-|  Progress: [████████████████░░░░░░░░] 66.7% (160 / 240 mins)  [Est. 80m left]     |
+|  CONCURRENT MINING ACCOUNTS (Parallel Execution)                                 |
+|  • @Account1: BlizzCon Day 1 Drop 6 (78.3%) -> @ow_esports (Overwatch)            |
+|  • @Account2: Rust Drops (100% Claimed)    -> IDLE                                |
 +-----------------------------------------------------------------------------------+
-|  [ Game Watchlist (Priority Queue) ]             |  [ Active Discovered Campaigns ]  |
-|  1. Rainbow Six Siege [✓ All Drops Claimed] [▲▼] |  • nopixel V (Ends Sep 20)        |
-|  2. Rust              [⏳ Waiting for Drops] [▲▼] |  • Overwatch 2 Community Drops    |
-|  3. Delta Force       [✓ All Drops Claimed] [▲▼] |  • Valorant Champions Drops       |
-|  4. Grand Theft Auto V [Mining Now (2 drops)]   |  • Apex Legends Global Drops      |
+|  [ Game Watchlist (Priority Queue) - Drag & Drop ]  |  [ Discovered Campaigns ]   |
+|  :: #1. Rainbow Six Siege [✓ All Drops Claimed] [▲▼]|  • nopixel V (Active)       |
+|  :: #2. Rust              [✓ All Drops Claimed] [▲▼]|  • Overwatch 2 Esports      |
+|  :: #3. Cyberpunk 2077    [⏳ Waiting for Drops][▲▼]|  • Valorant Champions Drops |
+|  :: #4. Grand Theft Auto V [Mining Now (2 drops)]    |  • Apex Legends Drops       |
 +-----------------------------------------------------------------------------------+
-|  [ Claimed Rewards History ]                     |  [ Real-Time Telemetry & Logs ]   |
-|  ✓ GTA$250K - Claimed 1h ago                     |  [15:08:55] Watching @nmplol      |
-|  ✓ LAV-AA - Bombworks - Claimed 6h ago           |  [15:09:55] Heartbeat confirmed   |
+|  [ Claimed Rewards History ]                        |  [ Real-Time Logs ]         |
+|  ✓ GTA$250K - Claimed 1h ago                        |  [01:05:25] Telemetry live  |
+|  ✓ Overwatch Spray - Claimed 2h ago                 |  [01:06:25] Claim confirmed |
 +-----------------------------------------------------------------------------------+
 ```
 
@@ -47,13 +46,14 @@ A modern, standalone, self-hosted web service for automatic Twitch Drop mining. 
 
 ## ✨ Key Features
 
+- 👥 **Multi-Account Concurrent Mining**: Connect multiple Twitch accounts simultaneously via OAuth 2.0 Device Code Flow. Each account runs an isolated background engine with independent cookie jars (`cookies_<user_id>.jar`), telemetry watch loops, and drop claimers in parallel.
 - 🔒 **Twitch OAuth 2.0 Device Flow**: Authenticate seamlessly using standard TV/Console device activation codes (`twitch.tv/activate`). No passwords, no 2FA credentials entered, and zero brittle browser automation (Puppeteer/Selenium).
 - ⚡ **Headless Zero-Bandwidth Mining**: Emulates minute-watched viewing events directly via Twitch GraphQL and Spade telemetry without downloading video or audio streams (saves ~99.9% bandwidth, using ~1KB/min).
-- 🎯 **Accurate Drop Availability & Completion Detection**: Evaluates campaign time windows, preconditions, and claimed benefits in real-time. Distinguishes between earnable drops, completed campaigns (`All Drops Claimed`), and games waiting for future drops.
+- 🎯 **Interactive Drag-and-Drop Watchlist**: Reorder game priority by directly dragging game cards up and down with dedicated visual handles (`GripVertical`), plus automatic viewport edge scrolling when dragging near top/bottom screen edges.
+- 📊 **Accurate Drop Availability & Completion Detection**: Evaluates campaign time windows, preconditions, and claimed benefits in real-time. Distinguishes between earnable drops, completed campaigns (`All Drops Claimed`), and games waiting for future drops.
 - 🔍 **Dynamic Game & Campaign Discovery**: Queries Twitch APIs directly to search games and discover active/upcoming drop events.
-- 📋 **Priority Watchlist**: Organize watchlisted games with drag-and-drop or rank adjustments. Automatically transitions to the next available campaign or drop reward.
 - 🔄 **Smart Streamer Failover**: Detects when a current streamer goes offline and automatically switches to the next top eligible streamer broadcasting the same game with drops enabled.
-- 🎁 **Automated Reward Claiming**: Automatically triggers `ClaimDropMutation` when drops reach 100% and stores the reward history in a persistent SQLite database.
+- 🎁 **Automated Reward Claiming**: Automatically triggers `ClaimDropMutation` as soon as drops reach 100% and records full claiming history in SQLite.
 - 🛡️ **Hardened Security**:
   - OAuth access and refresh tokens are encrypted at rest using **AES-256-GCM**.
   - Admin login secured with **bcrypt** hashing.
