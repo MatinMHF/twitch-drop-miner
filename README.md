@@ -1,8 +1,6 @@
 <div align="center">
 
-<p align="center">
-  <img src="assets/hero-banner.svg" alt="Twitch Drop Miner Banner" width="100%" />
-</p>
+<img src="https://raw.githubusercontent.com/MatinMHF/twitch-drop-miner/main/assets/hero-banner.svg" alt="Twitch Drop Miner Banner" width="100%" />
 
 # 🎮 Twitch Drop Miner
 
