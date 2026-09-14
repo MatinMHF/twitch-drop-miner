@@ -187,12 +187,12 @@
   <!-- Bottom Accent Highlights -->
   <g transform="translate(80, 340)">
     <text font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', monospace" font-size="12" fill="#64748b">
-      Docker &bull; FastAPI &bull; React 18 &bull; TypeScript &bull; Tailwind CSS &bull; SQLite
+      Docker • FastAPI • React 18 • TypeScript • Tailwind CSS • SQLite
     </text>
   </g>
   <g transform="translate(980, 340)">
     <text font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="12" font-weight="600" fill="#c084fc">
-      github.com/MatinMHF &rarr;
+      github.com/MatinMHF →
     </text>
   </g>
 </svg>
