@@ -27,6 +27,17 @@ class DeviceAuthFlow:
         "user:read:broadcast",
         "chat:read",
         "user:read:subscriptions",
+        "channel_commercial",
+        "channel_editor",
+        "channel_feed_edit",
+        "channel_feed_read",
+        "channel_read",
+        "collections_edit",
+        "communities_edit",
+        "communities_moderate",
+        "user_follows_edit",
+        "user_subscriptions",
+        "whispers_edit",
     ]
 
     def __init__(self, client_id: Optional[str] = None):

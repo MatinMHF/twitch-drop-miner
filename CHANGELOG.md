@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-09-23
+
+### Added
+- **Real In-Game Reward Benefit Name Resolution**:
+  - Automatically resolves real in-game item reward titles (e.g. `'2024 Frost Uniform'`, `'OL' CLANKER'`) when game publishers define raw drop slots with generic names such as `'Test'`, `'Drop'`, or `'Reward'`.
+- **Global Shared Campaigns Architecture**:
+  - Introduced unified cross-account shared campaign cache. When Twitch GraphQL returns `dropCampaigns: null` for newly created or restricted accounts, instances automatically inherit verified global campaigns discovered across other connected accounts.
+- **Enhanced Multi-Target Live Dashboard UI**:
+  - Each actively mining account renders an independent, detailed live status card.
+  - High-resolution **Official Game Box Art** thumbnail with dedicated hover-to-zoom preview modal.
+  - High-contrast **Drop Reward Item Badge** with interactive hover magnification pop-up.
+  - Prominent **Account Owner Tag** (`Account: @username`) with pulsing status indicator.
+  - Streamer info, viewer counts, and exact minute watched counter with animated gradient progress bar.
+- **Smart Interactive Installer (`install.sh`)**:
+  - Intelligent installation script that detects existing deployments and prompts:
+    - Press `y`: Safe in-place update preserving SQLite database, watchlist priorities, and AES-256 encrypted tokens.
+    - Press `n`: Clean reinstallation from scratch with optional database wipe.
+
+### Fixed
+- **MultiTwitchAccountsResponse Pydantic Typo**:
+  - Added missing `List` import to `app.schemas.auth` preventing HTTP 500 error on `/api/auth/twitch/accounts`.
+- **Twitch OAuth Scope Deprecation**:
+  - Replaced deprecated legacy v5/Kraken scopes with modern RFC 8628 Twitch OAuth 2.0 scopes, resolving HTTP 400 error on `twitch.tv/activate`.
+- **Device Code Client Compatibility**:
+  - Switched default device flow client ID to Twitch's supported SmartBox/TV client.
+
 ## [1.2.1] - 2026-09-12
 
 ### Fixed

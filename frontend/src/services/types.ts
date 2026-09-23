@@ -85,16 +85,21 @@ export interface ChannelStreamInfo {
 }
 
 export interface ActiveMiningTarget {
+  account_id?: string;
+  twitch_username?: string;
   game_id: string;
   game_name: string;
+  game_image_url?: string;
   campaign_id: string;
   campaign_name: string;
   drop_id: string;
   drop_instance_id?: string;
   drop_name: string;
+  drop_image_url?: string;
   required_minutes: number;
   current_minutes: number;
   progress_percent: number;
+  progress_percentage?: number;
   channel?: ChannelStreamInfo;
 }
 

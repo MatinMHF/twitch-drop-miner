@@ -66,6 +66,9 @@ if TYPE_CHECKING:
 logger = logging.getLogger("TwitchDrops")
 gql_logger = logging.getLogger("TwitchDrops.gql")
 
+_SHARED_CAMPAIGNS_RAW_DATA: dict[str, JsonType] = {}
+_SHARED_CAMPAIGNS_EVENT: asyncio.Event = asyncio.Event()
+
 
 class SkipExtraJsonDecoder(json.JSONDecoder):
     def decode(self, s: str, *args):
@@ -1436,26 +1439,59 @@ class Twitch:
             for c in available_list
             if c["status"] in applicable_statuses  # that are currently not expired
         }
-        # fetch detailed data for each campaign, in chunks
-        status_update(_("gui", "status", "fetching_campaigns"))
-        fetch_campaigns_tasks: list[asyncio.Task[Any]] = [
-            asyncio.create_task(self.fetch_campaigns(campaigns_chunk))
-            for campaigns_chunk in chunk(available_campaigns.items(), 20)
-        ]
-        try:
-            for coro in asyncio.as_completed(fetch_campaigns_tasks):
-                chunk_campaigns_data = await coro
-                # merge the inventory and campaigns datas together
-                inventory_data = self._merge_data(inventory_data, chunk_campaigns_data)
-        except Exception:
-            # asyncio.as_completed doesn't cancel tasks on errors
-            for task in fetch_campaigns_tasks:
-                task.cancel()
-            raise
-        # filter out invalid campaigns
-        for campaign_id in list(inventory_data.keys()):
-            if inventory_data[campaign_id]["game"] is None:
-                del inventory_data[campaign_id]
+
+        # If this account doesn't have campaigns returned by Twitch (e.g. new accounts), use shared global campaigns
+        global _SHARED_CAMPAIGNS_RAW_DATA, _SHARED_CAMPAIGNS_EVENT
+        if not available_campaigns:
+            if not _SHARED_CAMPAIGNS_RAW_DATA:
+                try:
+                    await asyncio.wait_for(_SHARED_CAMPAIGNS_EVENT.wait(), timeout=12.0)
+                except (asyncio.TimeoutError, Exception):
+                    pass
+            if _SHARED_CAMPAIGNS_RAW_DATA:
+                logger.info(
+                    f"Using shared campaigns cache ({len(_SHARED_CAMPAIGNS_RAW_DATA)} campaigns) for @{self._auth_state.user_id}"
+                )
+                for cid, cdata in _SHARED_CAMPAIGNS_RAW_DATA.items():
+                    if cid not in inventory_data:
+                        c_copy = deepcopy(cdata)
+                        if "self" in c_copy:
+                            c_copy["self"]["isAccountConnected"] = True
+                        for d in c_copy.get("timeBasedDrops", []):
+                            if "self" in d:
+                                d["self"]["currentMinutesWatched"] = 0
+                                d["self"]["isClaimed"] = False
+                                d["self"]["dropInstanceID"] = None
+                        inventory_data[cid] = c_copy
+
+        if available_campaigns:
+            # fetch detailed data for each campaign, in chunks
+            status_update(_("gui", "status", "fetching_campaigns"))
+            fetch_campaigns_tasks: list[asyncio.Task[Any]] = [
+                asyncio.create_task(self.fetch_campaigns(campaigns_chunk))
+                for campaigns_chunk in chunk(available_campaigns.items(), 20)
+            ]
+            try:
+                for coro in asyncio.as_completed(fetch_campaigns_tasks):
+                    chunk_campaigns_data = await coro
+                    # merge the inventory and campaigns datas together
+                    inventory_data = self._merge_data(inventory_data, chunk_campaigns_data)
+            except Exception:
+                # asyncio.as_completed doesn't cancel tasks on errors
+                for task in fetch_campaigns_tasks:
+                    task.cancel()
+                raise
+            # filter out invalid campaigns
+            for campaign_id in list(inventory_data.keys()):
+                if inventory_data[campaign_id]["game"] is None:
+                    del inventory_data[campaign_id]
+
+            if inventory_data:
+                _SHARED_CAMPAIGNS_RAW_DATA = {
+                    cid: cdata for cid, cdata in inventory_data.items()
+                    if cdata.get("game") is not None
+                }
+                _SHARED_CAMPAIGNS_EVENT.set()
 
         if self.settings.dump:
             # dump the campaigns data to the dump file

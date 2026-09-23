@@ -44,7 +44,7 @@
 
 ```text
 +-----------------------------------------------------------------------------------+
-|  [Tv] Twitch Drop Miner  v1.2.1      (•) Telemetry Live   [2 Accounts Active] [⚙] |
+|  [Tv] Twitch Drop Miner  v1.3.0      (•) Telemetry Live   [2 Accounts Active] [⚙] |
 +-----------------------------------------------------------------------------------+
 |  [ Status: MINING ]  [ Claimed: 26 ]  [ Watchlist: 33 ]  [ Bandwidth Saved: 99.9% ]|
 +-----------------------------------------------------------------------------------+
@@ -71,6 +71,9 @@
 | Capability | Technical Implementation | Value |
 | :--- | :--- | :--- |
 | 👥 **Multi-Account Mining** | `MultiAccountMiningManager` orchestrates N isolated workers with per-account cookie jars (`cookies_<user_id>.jar`) | Mine and claim drops across multiple accounts simultaneously without session collisions. |
+| 🌐 **Shared Campaigns Discovery** | Unified cross-worker global campaign sharing cache | Newly registered Twitch accounts receive full drop campaigns even if Twitch returns null. |
+| 🖼️ **Visual Mining & Hover Zoom** | High-res game box art and drop reward items with interactive hover zoom pop-ups | Instantly see what game and specific cosmetic or item each account is currently earning. |
+| 🏷️ **Real In-Game Item Resolution** | Deep inspection of GQL `benefitEdges` to surface true reward titles | Replaces generic developer slot names (like `Test` or `Drop`) with the exact in-game item name. |
 | ⚡ **Zero-Bandwidth Engine** | Emulates minute-watched telemetry via Twitch GQL & Spade API (no video/audio downloaded) | Consumes only ~1-2 KB/min (~80MB RAM), saving over 99.9% network bandwidth. |
 | 🔒 **Twitch Device OAuth 2.0** | Official TV/Console Device Code Grant (`twitch.tv/activate`) with activation code & QR | Zero Twitch passwords or 2FA credentials handled; no brittle browser automation needed. |
 | 🎯 **Drag-and-Drop Watchlist** | HTML5 drag-and-drop with visual grab handles (`GripVertical`) and viewport edge auto-scroll | Effortlessly reorder game priorities even in massive watchlists (30+ games). |
@@ -81,25 +84,38 @@
 
 ---
 
-## 🚀 Quick Start with Docker
+## 🚀 Quick Start & Installation
 
-### 1. Clone the repository
+### Option A: Smart Interactive Installer (Recommended)
+Automatically detects whether an existing deployment is already present. If found, it offers to **update in-place** (preserving all encrypted tokens and watchlists) or perform a **clean reinstallation from scratch**:
+
+```bash
+git clone https://github.com/MatinMHF/twitch-drop-miner.git
+cd twitch-drop-miner
+chmod +x install.sh && ./install.sh
+```
+
+---
+
+### Option B: Manual Setup with Docker Compose
+
+#### 1. Clone the repository
 ```bash
 git clone https://github.com/MatinMHF/twitch-drop-miner.git
 cd twitch-drop-miner
 ```
 
-### 2. Configure Environment (Optional)
+#### 2. Configure Environment (Optional)
 ```bash
 cp .env.example .env
 ```
 
-### 3. Launch with Docker Compose
+#### 3. Launch with Docker Compose
 ```bash
 docker compose up -d --build
 ```
 
-### 4. Access Web Dashboard
+### Accessing the Web Dashboard
 Open your browser at:
 👉 **`http://localhost:8080`**
 

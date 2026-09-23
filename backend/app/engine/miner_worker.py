@@ -69,17 +69,46 @@ class SingleAccountWorker:
             camp = getattr(cur_drop, "campaign", None)
             camp_game = getattr(camp, "game", None) if camp else None
             game_name = getattr(camp_game, "name", "") if camp_game else (stream_info["game_name"] if stream_info else "")
+
+            # Game image URL
+            game_image_url = ""
+            if camp and hasattr(camp, "image_url") and camp.image_url:
+                game_image_url = str(camp.image_url)
+            elif camp_game and hasattr(camp_game, "id") and camp_game.id:
+                game_image_url = f"https://static-cdn.jtvnw.net/ttv-boxart/{camp_game.id}-285x380.jpg"
+
+            # Drop benefit image URL
+            drop_image_url = ""
+            benefits = getattr(cur_drop, "benefits", None) or []
+            if benefits and hasattr(benefits[0], "image_url") and benefits[0].image_url:
+                drop_image_url = str(benefits[0].image_url)
+
+            # Resolve real in-game reward name if the slot is named "Test" or generic
+            drop_display_name = getattr(cur_drop, "name", "Drop Reward")
+            if hasattr(cur_drop, "rewards_text") and cur_drop.rewards_text():
+                rewards = cur_drop.rewards_text()
+                if drop_display_name.lower() in ("test", "drop", "reward", "rewards") or not drop_display_name:
+                    drop_display_name = rewards
+                elif rewards and rewards.lower() != drop_display_name.lower():
+                    drop_display_name = f"{rewards} ({drop_display_name})"
+
             target_obj = {
+                "account_id": self.account_id,
+                "twitch_username": self.twitch_username,
                 "game_id": str(getattr(camp_game, "id", "")) if camp_game else "",
                 "game_name": game_name,
+                "game_image_url": game_image_url,
                 "campaign_id": getattr(camp, "id", "") if camp else "",
                 "campaign_name": getattr(camp, "name", "") if camp else "",
                 "drop_id": getattr(cur_drop, "id", ""),
-                "drop_name": getattr(cur_drop, "name", ""),
+                "drop_name": drop_display_name,
+                "drop_image_url": drop_image_url,
                 "required_minutes": req_min,
                 "current_minutes": cur_min,
                 "progress_percentage": progress_pct,
+                "progress_percent": progress_pct,
                 "is_claimed": getattr(cur_drop, "is_claimed", False),
+                "channel": stream_info,
             }
 
         return {
@@ -290,19 +319,35 @@ class MultiAccountMiningManager:
         """Aggregate status across all active accounts with backwards compatibility."""
         accounts_status = [w.get_status() for w in self.workers.values()]
 
-        # Primary account (first active worker) for legacy single-account consumers
+        # Collect active drops across all workers
+        active_targets = []
+        for acc in accounts_status:
+            if acc.get("active_drop"):
+                active_targets.append(acc["active_drop"])
+
+        primary_target = active_targets[0] if active_targets else None
         primary = accounts_status[0] if accounts_status else {}
 
         any_running = any(w.is_running for w in self.workers.values())
         all_paused = all(w.is_paused for w in self.workers.values()) if self.workers else False
 
+        state = "IDLE"
+        if not any_running:
+            state = "IDLE"
+        elif all_paused:
+            state = "PAUSED"
+        elif active_targets:
+            state = "MINING"
+
         return {
+            "state": state,
             "is_running": any_running,
             "is_paused": all_paused,
             "error_message": primary.get("error_message"),
-            "status_text": primary.get("status_text", "Idle"),
-            "active_channel": primary.get("active_channel"),
-            "active_drop": primary.get("active_drop"),
+            "status_text": primary_target["drop_name"] if primary_target else primary.get("status_text", "Idle"),
+            "active_channel": primary_target["channel"] if primary_target else primary.get("active_channel"),
+            "active_drop": primary_target or primary.get("active_drop"),
+            "active_targets": active_targets,
             "next_poll_at": primary.get("next_poll_at"),
             "accounts_count": len(accounts_status),
             "accounts": accounts_status,

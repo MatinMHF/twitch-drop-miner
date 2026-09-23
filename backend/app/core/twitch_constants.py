@@ -13,7 +13,7 @@ from typing import Dict, Any
 # Twitch Android App Client ID (bypasses browser integrity checks for full drop campaigns)
 DEFAULT_TWITCH_WEB_CLIENT_ID: str = "kd1unb4b3q4t58fwlpcbzcbnm76a8fp"
 DEFAULT_TWITCH_USER_AGENT: str = "Dalvik/2.1.0 (Linux; U; Android 16; SM-S911B Build/TP1A.220624.014) tv.twitch.android.app/25.3.0/2503006"
-DEFAULT_TWITCH_DEVICE_CLIENT_ID: str = "kd1unb4b3q4t58fwlpcbzcbnm76a8fp"
+DEFAULT_TWITCH_DEVICE_CLIENT_ID: str = "ue6666qo983tsx6so1t0vnawi233wa"
 
 TWITCH_WEB_CLIENT_ID: str = os.getenv("TWITCH_WEB_CLIENT_ID", DEFAULT_TWITCH_WEB_CLIENT_ID)
 TWITCH_USER_AGENT: str = os.getenv("TWITCH_USER_AGENT", DEFAULT_TWITCH_USER_AGENT)
