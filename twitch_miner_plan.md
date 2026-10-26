@@ -187,7 +187,12 @@ twitch-drop-miner/
   - Implemented native HTML5 Drag-and-Drop reordering for watchlist priority with visual drag grip handles (`GripVertical`).
   - Implemented viewport edge auto-scrolling with threshold detection (120px) to smoothly navigate large watchlists during drag operations.
   - Live persistence to SQLite database and real-time synchronization with mining workers.
-- [x] **Testing & Verification**: 100% test pass rate across all API, crypto, security, and constants test suites.
+- [x] **Heartbeat Telemetry & Watch Verification Fix (v1.3.1)**:
+  - Replaced frozen `@cached_property` on `_watch_payload`, `spade_payload`, and `gql_payload` with dynamic properties evaluating `isonow()` per heartbeat to prevent Twitch duplicate-timestamp drop rejection.
+  - Activated HLS stream playlist chunk HEAD requests in `send_watch()` to establish genuine player presence on Twitch video CDN without downloading video/audio (zero bandwidth).
+  - Implemented dual-layer telemetry dispatch: authenticated `sendSpadeEvents` GQL mutation with OAuth token + direct Spade requests with auth cookies.
+  - Added 60s fallback sync in `BridgeProgress.minute_almost_done` to query `CurrentDrop` via GQL if WebSocket events delay.
+- [x] **Testing & Verification**: 100% test pass rate across all 15 API, crypto, security, constants, and heartbeat test suites.
 
 ---
 
