@@ -192,7 +192,13 @@ twitch-drop-miner/
   - Activated HLS stream playlist chunk HEAD requests in `send_watch()` to establish genuine player presence on Twitch video CDN without downloading video/audio (zero bandwidth).
   - Implemented dual-layer telemetry dispatch: authenticated `sendSpadeEvents` GQL mutation with OAuth token + direct Spade requests with auth cookies.
   - Added 60s fallback sync in `BridgeProgress.minute_almost_done` to query `CurrentDrop` via GQL if WebSocket events delay.
-- [x] **Testing & Verification**: 100% test pass rate across all 15 API, crypto, security, constants, and heartbeat test suites.
+- [x] **Drop Verification & Verified Progress Engine (v1.3.2)**:
+  - Enforced `available_drops_check: true` to eliminate streamer false positives (filtering out streams with irrelevant global promotions like Apple TV and focusing strictly on true game drop campaigns).
+  - Eliminated local phantom/fake progress (`extra_current_minutes`), guaranteeing the dashboard displays exclusively genuine Twitch server-confirmed minutes (`real_current_minutes`).
+  - Bootstrapped pytest test collection via `conftest.py` with dynamic `sys.path` injection for DevilXD imports.
+  - Added `sqlalchemy[asyncio]` and `greenlet>=3.0.0` dependencies to `requirements.txt`, achieving 100% green CI pipeline across all GitHub Actions jobs.
+  - Successfully deployed to production AWS Lightsail server and verified end-to-end via QA & Visual Test Agent on live dashboard at `https://twitch.arkacore.online`.
+- [x] **Testing & Verification**: 100% test pass rate across all 19 API, crypto, security, constants, drop verification, and heartbeat test suites.
 
 ---
 
