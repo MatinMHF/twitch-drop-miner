@@ -78,8 +78,14 @@ class BridgeStatus:
 class BridgeProgress:
     def __init__(self, bridge: "FastAPIBridgeGUIManager"):
         self.bridge = bridge
+        self.last_check: float = 0.0
 
     def minute_almost_done(self) -> bool:
+        from time import time
+        now = time()
+        if now - self.last_check >= 60.0:
+            self.last_check = now
+            return True
         return False
 
     def stop_timer(self):

@@ -6,7 +6,6 @@ import json
 import asyncio
 import logging
 from base64 import b64encode
-from functools import cached_property
 from typing import Any, SupportsInt, cast, TYPE_CHECKING
 
 import aiohttp
@@ -43,7 +42,7 @@ class Stream:
         self.title: str = title
         self._stream_url: URLType | None = None
 
-    @cached_property
+    @property
     def _watch_payload(self) -> list[JsonType]:
         return [
             {
@@ -66,13 +65,13 @@ class Stream:
             }
         ]
 
-    @cached_property
+    @property
     def spade_payload(self) -> JsonType:
         return {
             "data": (b64encode(json_minify(self._watch_payload).encode("utf8"))).decode("utf8")
         }
 
-    @cached_property
+    @property
     def gql_payload(self) -> GQLQuery:
         return GQLQuery(
             (
@@ -308,20 +307,22 @@ class Channel:
         """
         SETTINGS_PATTERN: str = r'src="(https://[\w.]+/config/settings\.[0-9a-f]{32}\.js)"'
         SPADE_PATTERN: str = r'"spade_?url": ?"(https://[.\w\-/]+)"'
-        async with self._twitch.request("GET", self.url) as response1:
-            streamer_html: str = await response1.text(encoding="utf8")
-        match = re.search(SPADE_PATTERN, streamer_html, re.I)
-        if not match:
-            match = re.search(SETTINGS_PATTERN, streamer_html, re.I)
+        try:
+            async with self._twitch.request("GET", self.url) as response1:
+                streamer_html: str = await response1.text(encoding="utf8")
+            match = re.search(SPADE_PATTERN, streamer_html, re.I)
             if not match:
-                raise MinerException("Error while spade_url extraction: step #1")
-            streamer_settings = match.group(1)
-            async with self._twitch.request("GET", streamer_settings) as response2:
-                settings_js: str = await response2.text(encoding="utf8")
-            match = re.search(SPADE_PATTERN, settings_js, re.I)
-            if not match:
-                raise MinerException("Error while spade_url extraction: step #2")
-        return URLType(match.group(1))
+                match = re.search(SETTINGS_PATTERN, streamer_html, re.I)
+                if match:
+                    streamer_settings = match.group(1)
+                    async with self._twitch.request("GET", streamer_settings) as response2:
+                        settings_js: str = await response2.text(encoding="utf8")
+                    match = re.search(SPADE_PATTERN, settings_js, re.I)
+            if match:
+                return URLType(match.group(1))
+        except Exception as exc:
+            logger.debug(f"Spade URL extraction note for {self._login}: {exc}")
+        return URLType("https://spade.twitch.tv/track")
 
     def _check_drops_enabled(self, available_drops: list[JsonType]) -> bool:
         return any(
@@ -454,7 +455,7 @@ class Channel:
         # the response may contain some invalid JSON with duplicate double quotes
         # in the value strings: we need to get rid of them by removing the "url" key entirely
         # if no JSON can be found within the response, this is a NOOP
-        available_chunks = re.sub(r'"url": ?".+}",', '', available_chunks)
+        available_chunks = re.sub(r'"url": ?".+",', '', available_chunks)
         # try to decode the suspected JSON
         try:
             available_json: JsonType = json.loads(available_chunks)
