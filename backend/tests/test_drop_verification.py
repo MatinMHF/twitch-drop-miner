@@ -1,5 +1,13 @@
 """Tests for DevilXD fake progress prevention and strict AvailableDrops verification."""
 
+import sys
+from pathlib import Path
+
+# Ensure devilxd directory is in sys.path before importing devilxd modules
+_devilxd_dir = Path(__file__).resolve().parent.parent / "app" / "engine" / "devilxd"
+if _devilxd_dir.is_dir() and str(_devilxd_dir) not in sys.path:
+    sys.path.insert(0, str(_devilxd_dir))
+
 import pytest
 from datetime import datetime, timezone, timedelta
 from app.engine.devilxd.inventory import TimedDrop, DropsCampaign
