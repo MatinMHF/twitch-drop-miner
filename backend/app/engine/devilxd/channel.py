@@ -429,7 +429,6 @@ class Channel:
         if needs_display:
             self.display()
 
-    # NOTE: This is currently unused.
     async def _send_watch_playlist(self) -> bool:
         """
         This performs a HEAD request on the stream's current playlist,
@@ -486,14 +485,21 @@ class Channel:
         if self._stream is None:
             return False
 
-        # 1. Primary: GQL authenticated sendSpadeEvents mutation (guaranteed account credit via OAuth token)
+        # 1. HLS Stream Chunk HEAD request (registers genuine player presence on Twitch video CDN)
+        playlist_success = False
+        try:
+            playlist_success = await self._send_watch_playlist()
+        except RequestException:
+            pass
+
+        # 2. GQL authenticated sendSpadeEvents mutation (guaranteed account credit via OAuth token)
         gql_success = False
         try:
             gql_success = await self._send_watch_gql()
         except RequestException:
             pass
 
-        # 2. Secondary: Direct Spade endpoint with OAuth headers and auth-token cookie
+        # 3. Direct Spade endpoint with OAuth headers and auth-token cookie
         direct_success = False
         if self._spade_url is None:
             self._spade_url = await self.get_spade_url()
@@ -512,7 +518,7 @@ class Channel:
         except RequestException:
             pass
 
-        return gql_success or direct_success
+        return playlist_success or gql_success or direct_success
 
     async def _send_watch_gql(self) -> bool:
         if self._stream is None:
