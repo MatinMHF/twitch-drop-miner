@@ -91,7 +91,7 @@ async def list_watchlist(
         for w in miner_service.workers.values():
             if w.twitch and hasattr(w.twitch, "inventory") and w.twitch.inventory:
                 inventories.append(w.twitch.inventory)
-    elif miner_service.twitch and hasattr(miner_service.twitch, "inventory") and miner_service.twitch.inventory:
+    elif getattr(miner_service, "twitch", None) and hasattr(miner_service.twitch, "inventory") and miner_service.twitch.inventory:
         inventories.append(miner_service.twitch.inventory)
 
     for inv in inventories:

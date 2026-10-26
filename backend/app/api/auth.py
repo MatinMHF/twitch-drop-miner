@@ -40,6 +40,8 @@ from app.schemas.auth import (
     UserProfileResponse,
 )
 
+MultiTwitchAccountsResponse.model_rebuild()
+
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
 

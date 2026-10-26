@@ -154,7 +154,15 @@ class _AuthState:
                     #     "user_code": "8 chars [A-Z]",
                     #     "verification_uri": "https://www.twitch.tv/activate?device-code=ABCDEFGH"
                     # }
+                    if response.status != 200:
+                        try:
+                            err_payload = await response.json()
+                        except Exception:
+                            err_payload = await response.text()
+                        raise RuntimeError(f"Failed to obtain device code (HTTP {response.status}): {err_payload}")
                     response_json: JsonType = await response.json()
+                    if not isinstance(response_json, dict) or "device_code" not in response_json:
+                        raise RuntimeError(f"'device_code' not in response: {response_json}")
                     device_code: str = response_json["device_code"]
                     user_code: str = response_json["user_code"]
                     interval: int = response_json["interval"]
@@ -391,9 +399,12 @@ class _AuthState:
                 for invalid_token_attempt in range(2):
                     cookie = jar.filter_cookies(client_info.CLIENT_URL)
                     if "auth-token" not in cookie:
-                        self.access_token = await self._oauth_login()
-                        cookie["auth-token"] = self.access_token
-                    elif not hasattr(self, "access_token"):
+                        if hasattr(self, "access_token") and self.access_token:
+                            cookie["auth-token"] = self.access_token
+                        else:
+                            self.access_token = await self._oauth_login()
+                            cookie["auth-token"] = self.access_token
+                    elif not hasattr(self, "access_token") or not self.access_token:
                         logger.info("Restoring session from cookie")
                         self.access_token = cookie["auth-token"].value
                     # validate the auth token, by obtaining user_id

@@ -197,6 +197,13 @@ class SingleAccountWorker:
         self.twitch._auth_state.access_token = access_token
         self.twitch._auth_state.user_id = int(self.twitch_user_id)
         self.twitch._auth_state._logged_in.set()
+        if self.twitch._session is None:
+            await self.twitch.get_session()
+        from yarl import URL
+        self.twitch._session.cookie_jar.update_cookies(
+            {"auth-token": access_token},
+            URL("https://www.twitch.tv"),
+        )
 
         self.is_running = True
         self.is_paused = False

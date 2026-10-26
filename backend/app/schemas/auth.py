@@ -58,3 +58,6 @@ class TwitchAccountResponse(BaseModel):
 class MultiTwitchAccountsResponse(BaseModel):
     accounts: List[TwitchAccountResponse]
     total_connected: int
+
+
+MultiTwitchAccountsResponse.model_rebuild()
