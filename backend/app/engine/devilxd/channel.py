@@ -37,7 +37,11 @@ class Stream:
         self.channel: Channel = channel
         self.broadcast_id = int(id)
         self.viewers: int = viewers
-        self.drops_enabled: bool = not channel._twitch.settings.available_drops_check
+        has_check = (
+            getattr(getattr(channel, "_twitch", None), "settings", None) is not None
+            and getattr(channel._twitch.settings, "available_drops_check", False)
+        )
+        self.drops_enabled: bool = not has_check
         self.game: Game | None = Game(game) if game else None
         self.title: str = title
         self._stream_url: URLType | None = None
@@ -97,7 +101,12 @@ class Stream:
 
     @classmethod
     def from_directory(
-        cls, channel: Channel, channel_data: JsonType, *, drops_enabled: bool = False
+        cls,
+        channel: Channel,
+        channel_data: JsonType,
+        *,
+        drops_enabled: bool = False,
+        available_drops: list[JsonType] | None = None,
     ) -> Stream:
         self = cls(
             channel,
@@ -106,7 +115,21 @@ class Stream:
             viewers=channel_data["viewersCount"],
             title=channel_data["title"],
         )
-        self.drops_enabled = drops_enabled
+        has_check = (
+            getattr(getattr(channel, "_twitch", None), "settings", None) is not None
+            and getattr(channel._twitch.settings, "available_drops_check", False)
+        )
+        drops_to_check = (
+            available_drops
+            if available_drops is not None
+            else channel_data.get("available_drops") or channel_data.get("viewerDropCampaigns")
+        )
+        if drops_to_check is not None:
+            self.drops_enabled = channel._check_drops_enabled(drops_to_check, stream=self)
+        elif has_check:
+            self.drops_enabled = False
+        else:
+            self.drops_enabled = drops_enabled
         return self
 
     def __eq__(self, other: object) -> bool:
@@ -166,7 +189,7 @@ class Channel:
     def __init__(
         self,
         twitch: Twitch,
-        *,
+        *,\
         id: SupportsInt,
         login: str,
         display_name: str | None = None,
@@ -198,13 +221,20 @@ class Channel:
 
     @classmethod
     def from_directory(
-        cls, twitch: Twitch, data: JsonType, *, drops_enabled: bool = False
+        cls,
+        twitch: Twitch,
+        data: JsonType,
+        *,
+        drops_enabled: bool = False,
+        available_drops: list[JsonType] | None = None,
     ) -> Channel:
         channel = data["broadcaster"]
         self = cls(
             twitch, id=channel["id"], login=channel["login"], display_name=channel["displayName"]
         )
-        self._stream = Stream.from_directory(self, data, drops_enabled=drops_enabled)
+        self._stream = Stream.from_directory(
+            self, data, drops_enabled=drops_enabled, available_drops=available_drops
+        )
         return self
 
     def __repr__(self) -> str:
@@ -305,8 +335,8 @@ class Channel:
 
         For mobile view, spade_url is available immediately from the page, skipping step #2.
         """
-        SETTINGS_PATTERN: str = r'src="(https://[\w.]+/config/settings\.[0-9a-f]{32}\.js)"'
-        SPADE_PATTERN: str = r'"spade_?url": ?"(https://[.\w\-/]+)"'
+        SETTINGS_PATTERN: str = r'src=\"(https://[\w.]+/config/settings\.[0-9a-f]{32}\.js)\"'
+        SPADE_PATTERN: str = r'\"spade_?url\": ?\"(https://[.\w\-/]+)\"'
         try:
             async with self._twitch.request("GET", self.url) as response1:
                 streamer_html: str = await response1.text(encoding="utf8")
@@ -324,14 +354,29 @@ class Channel:
             logger.debug(f"Spade URL extraction note for {self._login}: {exc}")
         return URLType("https://spade.twitch.tv/track")
 
-    def _check_drops_enabled(self, available_drops: list[JsonType]) -> bool:
-        return any(
-            (
-                (campaign := self._twitch._campaigns.get(campaign_data["id"])) is not None
-                and campaign.can_earn(self, ignore_channel_status=True)
-            )
-            for campaign_data in available_drops
-        )
+    def _check_drops_enabled(
+        self, available_drops: list[JsonType], stream: Stream | None = None
+    ) -> bool:
+        if not available_drops:
+            return False
+        target_game = (stream.game if stream is not None else None) or self.game
+        wanted_games = getattr(self._twitch, "wanted_games", None)
+        for campaign_data in available_drops:
+            cid = campaign_data.get("id") if isinstance(campaign_data, dict) else str(campaign_data)
+            campaign = getattr(self._twitch, "_campaigns", {}).get(cid)
+            if campaign is None:
+                continue
+            # Ensure channels that ONLY have sitewide drops (like '1 Month of Apple TV')
+            # and NOT the target game drop (like Rust or Rainbow Six) are marked drops_enabled = False
+            if campaign.game.is_special():
+                continue
+            if target_game is not None and campaign.game != target_game:
+                continue
+            if wanted_games and campaign.game not in wanted_games:
+                continue
+            if campaign.can_earn(self, ignore_channel_status=True):
+                return True
+        return False
 
     def external_update(self, channel_data: JsonType, available_drops: list[JsonType]):
         """
@@ -343,8 +388,12 @@ class Channel:
             self._stream = None
             return
         stream = Stream.from_get_stream(self, channel_data)
-        if not stream.drops_enabled:
-            stream.drops_enabled = self._check_drops_enabled(available_drops)
+        has_check = (
+            getattr(getattr(self, "_twitch", None), "settings", None) is not None
+            and getattr(self._twitch.settings, "available_drops_check", False)
+        )
+        if not stream.drops_enabled or has_check:
+            stream.drops_enabled = self._check_drops_enabled(available_drops, stream=stream)
         self._stream = stream
 
     async def get_stream(self) -> Stream | None:
@@ -361,16 +410,22 @@ class Channel:
         if not channel_data["stream"]:
             return None
         stream = Stream.from_get_stream(self, channel_data)
-        if not stream.drops_enabled:
+        has_check = (
+            getattr(getattr(self, "_twitch", None), "settings", None) is not None
+            and getattr(self._twitch.settings, "available_drops_check", False)
+        )
+        if not stream.drops_enabled or has_check:
             try:
                 available_drops_campaigns: JsonType = await self._twitch.gql_request(
                     GQL_QUERIES["AvailableDrops"].with_variables({"channelID": str(self.id)})
                 )
             except MinerException:
                 logger.log(CALL, f"AvailableDrops GQL call failed for channel: {self._login}")
+                stream.drops_enabled = False
             else:
                 stream.drops_enabled = self._check_drops_enabled(
-                    available_drops_campaigns["data"]["channel"]["viewerDropCampaigns"] or []
+                    available_drops_campaigns["data"]["channel"]["viewerDropCampaigns"] or [],
+                    stream=stream,
                 )
         return stream
 

@@ -1610,12 +1610,43 @@ class Twitch:
         except GQLException as exc:
             raise MinerException(f"Game: {game.slug}") from exc
         if "game" in response["data"]:
-            return [
-                Channel.from_directory(
-                    self, stream_channel_data["node"], drops_enabled=drops_enabled
-                )
+            stream_nodes = [
+                stream_channel_data["node"]
                 for stream_channel_data in response["data"]["game"]["streams"]["edges"]
                 if stream_channel_data["node"]["broadcaster"] is not None
+            ]
+            available_drops_map: dict[int, list[JsonType]] = {}
+            if self.settings.available_drops_check and drops_enabled and stream_nodes:
+                available_gql_ops = [
+                    GQL_QUERIES["AvailableDrops"].with_variables({"channelID": str(node["broadcaster"]["id"])})
+                    for node in stream_nodes
+                ]
+                available_gql_tasks = [
+                    asyncio.create_task(self.gql_request(available_gql_chunk))
+                    for available_gql_chunk in chunk(available_gql_ops, 20)
+                ]
+                try:
+                    for coro in asyncio.as_completed(available_gql_tasks):
+                        response_list = await coro
+                        for response_json in response_list:
+                            if response_json.get("data", {}).get("channel"):
+                                available_info = response_json["data"]["channel"]
+                                available_drops_map[int(available_info["id"])] = (
+                                    available_info.get("viewerDropCampaigns") or []
+                                )
+                except Exception as exc:
+                    logger.debug(f"AvailableDrops batch fetch in get_live_streams failed: {exc}")
+                    for task in available_gql_tasks:
+                        task.cancel()
+
+            return [
+                Channel.from_directory(
+                    self,
+                    node,
+                    drops_enabled=drops_enabled,
+                    available_drops=available_drops_map.get(int(node["broadcaster"]["id"])),
+                )
+                for node in stream_nodes
             ]
         return []
 

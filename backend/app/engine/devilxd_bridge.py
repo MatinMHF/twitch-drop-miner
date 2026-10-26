@@ -294,6 +294,7 @@ def create_devilxd_instance(priority_games: List[str], user_id: Optional[str] = 
     settings = Settings(DummyArgs())
     settings.priority = priority_games
     settings.priority_mode = PriorityMode.PRIORITY_ONLY
+    settings.available_drops_check = True
     if user_id:
         from constants import DATA_STORAGE_DIR
         settings.cookie_path = Path(DATA_STORAGE_DIR, f"cookies_{user_id}.jar")

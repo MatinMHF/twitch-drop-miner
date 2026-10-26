@@ -244,7 +244,7 @@ class TimedDrop(BaseDrop):
 
     @property
     def current_minutes(self) -> int:
-        return self.real_current_minutes + self.extra_current_minutes
+        return self.real_current_minutes
 
     @property
     def remaining_minutes(self) -> int:
@@ -310,7 +310,6 @@ class TimedDrop(BaseDrop):
     def _bump_minutes(self, channel: Channel | None) -> bool:
         if self.can_earn(channel):
             self.extra_current_minutes += 1
-            self._on_state_changed()
             if self.extra_current_minutes >= MAX_EXTRA_MINUTES:
                 return True
         return False

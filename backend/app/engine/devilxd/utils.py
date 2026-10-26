@@ -441,8 +441,10 @@ class Game:
         return f"Game({self.id}, {self.name})"
 
     def __eq__(self, other: object) -> bool:
-        if isinstance(other, self.__class__):
-            return self.id == other.id
+        if hasattr(other, "id"):
+            return self.id == getattr(other, "id")
+        if isinstance(other, str):
+            return self.name.lower() == other.lower() or str(self.id) == other
         return NotImplemented
 
     def __hash__(self) -> int:

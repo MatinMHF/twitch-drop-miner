@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, TypedDict, TYPE_CHECKING
+from typing import Any, TypedDict, TYPE_CHECKING, Optional
+from pathlib import Path
 
 from yarl import URL
 
@@ -35,7 +36,7 @@ default_settings: SettingsFile = {
     "language": DEFAULT_LANG,
     "tray_notifications": True,
     "enable_badges_emotes": False,
-    "available_drops_check": False,
+    "available_drops_check": True,
     "priority_mode": PriorityMode.PRIORITY_ONLY,
 }
 
