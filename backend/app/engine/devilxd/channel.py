@@ -485,17 +485,35 @@ class Channel:
     async def send_watch(self) -> bool:
         if self._stream is None:
             return False
+
+        # 1. Primary: GQL authenticated sendSpadeEvents mutation (guaranteed account credit via OAuth token)
+        gql_success = False
+        try:
+            gql_success = await self._send_watch_gql()
+        except RequestException:
+            pass
+
+        # 2. Secondary: Direct Spade endpoint with OAuth headers and auth-token cookie
+        direct_success = False
         if self._spade_url is None:
             self._spade_url = await self.get_spade_url()
         try:
+            token = getattr(self._twitch._auth_state, "access_token", None) or ""
+            headers: dict[str, str] = {}
+            cookies: dict[str, str] = {}
+            if token:
+                headers["Authorization"] = f"OAuth {token}"
+                headers["Client-ID"] = self._twitch._client_type.CLIENT_ID
+                cookies["auth-token"] = token
             async with self._twitch.request(
-                "POST", self._spade_url, data=self._stream.spade_payload
+                "POST", self._spade_url, data=self._stream.spade_payload, headers=headers, cookies=cookies
             ) as response:
-                return response.status == 204
+                direct_success = (response.status == 204)
         except RequestException:
-            return False
+            pass
 
-    # NOTE: This is currently unused.
+        return gql_success or direct_success
+
     async def _send_watch_gql(self) -> bool:
         if self._stream is None:
             return False
