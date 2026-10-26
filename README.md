@@ -23,7 +23,7 @@
 
 <p align="center">
   A modern, production-grade, self-hosted web service for automatic Twitch Drop mining.<br/>
-  Emulates viewer telemetry via lightweight GraphQL heartbeats without streaming video or audio.
+  Emulates viewer telemetry via tri-layer authenticated heartbeats and zero-bandwidth HLS stream presence verification.
 </p>
 
 <p align="center">
@@ -44,7 +44,7 @@
 
 ```text
 +-----------------------------------------------------------------------------------+
-|  [Tv] Twitch Drop Miner  v1.3.0      (•) Telemetry Live   [2 Accounts Active] [⚙] |
+|  [Tv] Twitch Drop Miner  v1.3.1      (•) Telemetry Live   [2 Accounts Active] [⚙] |
 +-----------------------------------------------------------------------------------+
 |  [ Status: MINING ]  [ Claimed: 26 ]  [ Watchlist: 33 ]  [ Bandwidth Saved: 99.9% ]|
 +-----------------------------------------------------------------------------------+
@@ -72,9 +72,11 @@
 | :--- | :--- | :--- |
 | 👥 **Multi-Account Mining** | `MultiAccountMiningManager` orchestrates N isolated workers with per-account cookie jars (`cookies_<user_id>.jar`) | Mine and claim drops across multiple accounts simultaneously without session collisions. |
 | 🌐 **Shared Campaigns Discovery** | Unified cross-worker global campaign sharing cache | Newly registered Twitch accounts receive full drop campaigns even if Twitch returns null. |
+| 📡 **Tri-Layer Telemetry & HLS Verification** | Dispatches authenticated GQL `sendSpadeEvents`, direct Spade telemetry with session cookies, and HLS chunk HEAD checks | Triple-redundancy heartbeat delivery proving legitimate player presence on Twitch's CDN with zero media download. |
+| ⏱️ **Dynamic Heartbeats & Fallback Sync** | Real-time dynamic ISO timestamping (`isonow()`) per minute with 60-second GQL session context polling fallback | Solves duplicate minute rejections on long sessions and bridges PubSub WebSocket lag seamlessly. |
 | 🖼️ **Visual Mining & Hover Zoom** | High-res game box art and drop reward items with interactive hover zoom pop-ups | Instantly see what game and specific cosmetic or item each account is currently earning. |
 | 🏷️ **Real In-Game Item Resolution** | Deep inspection of GQL `benefitEdges` to surface true reward titles | Replaces generic developer slot names (like `Test` or `Drop`) with the exact in-game item name. |
-| ⚡ **Zero-Bandwidth Engine** | Emulates minute-watched telemetry via Twitch GQL & Spade API (no video/audio downloaded) | Consumes only ~1-2 KB/min (~80MB RAM), saving over 99.9% network bandwidth. |
+| ⚡ **Zero-Bandwidth Engine** | Emulates minute-watched telemetry via Twitch GQL, Spade, and HLS HEAD checks (no media download) | Consumes only ~1-2 KB/min (~80MB RAM), saving over 99.9% network bandwidth. |
 | 🔒 **Twitch Device OAuth 2.0** | Official TV/Console Device Code Grant (`twitch.tv/activate`) with activation code & QR | Zero Twitch passwords or 2FA credentials handled; no brittle browser automation needed. |
 | 🎯 **Drag-and-Drop Watchlist** | HTML5 drag-and-drop with visual grab handles (`GripVertical`) and viewport edge auto-scroll | Effortlessly reorder game priorities even in massive watchlists (30+ games). |
 | 📊 **Accurate Drop Availability** | Evaluates real-time preconditions, campaign time windows, and claimed benefits | Accurately labels games as `All Drops Claimed`, `Active Drops`, or `Waiting`. |
@@ -162,13 +164,16 @@ graph TD
         MiningService --> Worker2[Worker Account #N<br/>cookies_userN.jar]
         
         Worker1 --> GQLClient[Twitch GQL Client]
-        Worker1 --> SpadeTracker[Spade Minute Watcher]
+        Worker1 --> SpadeTracker[Spade & Telemetry Dispatcher]
+        Worker1 --> HLSVerifier[HLS Playlist HEAD Verifier]
         Worker2 --> GQLClient
         Worker2 --> SpadeTracker
+        Worker2 --> HLSVerifier
     end
 
-    GQLClient <-->|GQL Queries & Claims| TwitchGQL[Twitch GraphQL API]
-    SpadeTracker <-->|Heartbeats| TwitchSpade[Twitch Spade Telemetry]
+    GQLClient <-->|GQL Queries, Claims & sendSpadeEvents| TwitchGQL[Twitch GraphQL API]
+    SpadeTracker <-->|Direct Spade Heartbeats| TwitchSpade[Twitch Spade Telemetry]
+    HLSVerifier <-->|Chunk HEAD Requests (0 KB)| TwitchCDN[Twitch Video CDN]
 ```
 
 </details>

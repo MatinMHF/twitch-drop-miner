@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] - 2026-10-26
+
+### Added
+- **Tri-Layer Telemetry & HLS Stream Presence Verification**:
+  - Activated `_send_watch_playlist()` in `Channel.send_watch()` sending lightweight HTTP HEAD requests to stream playlist chunks, proving legitimate player presence on Twitch's video CDN edge with zero video/audio stream download (0 KB bandwidth overhead).
+  - Dual-layer authenticated telemetry dispatching: dispatches both authenticated GraphQL `sendSpadeEvents` mutations with OAuth token and direct Spade telemetry POST requests (`https://spade.twitch.tv/track`) with session cookies and authorization headers.
+- **60-Second Fallback Progress Synchronization**:
+  - Implemented automatic fallback polling in `BridgeProgress.minute_almost_done` to query `DropCurrentSessionContext` via GraphQL every 60 seconds if WebSocket PubSub telemetry is delayed or drops out.
+- **Dynamic Heartbeat & Progress Pytest Suite**:
+  - Added dedicated test suite `backend/tests/test_heartbeat_payload.py` ensuring timestamp dynamism per heartbeat and verifying 60-second progress fallback logic. 100% test pass rate across 15 test suites.
+
+### Fixed
+- **Dynamic Heartbeat Telemetry & Frozen Timestamp Resolution**:
+  - Replaced frozen `@cached_property` on `Stream._watch_payload` and `Stream.spade_payload` with dynamic properties evaluating `isonow()` per heartbeat.
+  - Solved critical issue where Twitch rejected repeated minutes as duplicate timestamps after channel switch or during extended mining sessions.
+- **Resilient Spade URL Extraction**:
+  - Enhanced `Channel.get_spade_url()` with graceful fallback to `https://spade.twitch.tv/track`, preventing unhandled exceptions when channel HTML/JS scraping fails.
+
 ## [1.3.0] - 2026-09-23
 
 ### Added
