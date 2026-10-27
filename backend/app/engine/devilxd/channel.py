@@ -524,7 +524,7 @@ class Channel:
                 logger.error(f"Send watch error: \"{available_json['error']}\"")
             return False
         # the list contains ~15 chunks of the stream at ~2s intervals
-        chunks_list[URLType] = [
+        chunks_list: list[URLType] = [
             URLType(chunk)
             for chunk in available_chunks.strip().split("\n")
             if chunk.startswith("http")
