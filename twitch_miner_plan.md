@@ -197,8 +197,12 @@ twitch-drop-miner/
   - Eliminated local phantom/fake progress (`extra_current_minutes`), guaranteeing the dashboard displays exclusively genuine Twitch server-confirmed minutes (`real_current_minutes`).
   - Bootstrapped pytest test collection via `conftest.py` with dynamic `sys.path` injection for DevilXD imports.
   - Added `sqlalchemy[asyncio]` and `greenlet>=3.0.0` dependencies to `requirements.txt`, achieving 100% green CI pipeline across all GitHub Actions jobs.
-  - Successfully deployed to production AWS Lightsail server and verified end-to-end via QA & Visual Test Agent on live dashboard at `https://twitch.arkacore.online`.
-- [x] **Testing & Verification**: 100% test pass rate across all 19 API, crypto, security, constants, drop verification, and heartbeat test suites.
+- [x] **Full HLS Playlist Chunks Iteration & Bot-Free Watch Interval (v1.3.3)**:
+  - Adopted official DevilXD upstream commit `f693b0c` resolving Twitch bot detection and stalled drop counting.
+  - Iterates over all ~15 stream chunks in m3u8 playlist dispatching lightweight `HEAD` requests (0 bytes download, complete CDN playback simulation).
+  - Reduced `WATCH_INTERVAL` to 20 seconds (`timedelta(seconds=20)`) to maintain persistent playback presence.
+  - Verified live advancement from 8m -> 10m -> 12m (20%) on Twitch servers and live dashboard.
+- [x] **Testing & Verification**: 100% test pass rate across all 28 API, crypto, security, constants, drop verification, and HLS watch test suites.
 
 ---
 
