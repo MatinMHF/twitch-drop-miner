@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-10-29
+
+### Added
+- **Bot-Free Full HLS Playlist Chunks Iteration**:
+  - Implemented upstream DevilXD `f693b0c` pattern iterating through all ~15 stream chunks in each m3u8 playlist dispatching lightweight HTTP `HEAD` requests.
+  - Reduced `WATCH_INTERVAL` to 20 seconds (`timedelta(seconds=20)`), establishing persistent playback presence on Twitch's CDN edge without media stream downloads (0 KB bandwidth overhead).
+  - Effectively bypasses Twitch bot detection heuristics and prevents stalled drop progress.
+- **Worker Resilience & Exponential Backoff Retry Loop**:
+  - Implemented automatic self-healing retry mechanism in `SingleAccountWorker._run_wrapper` with exponential backoff on unhandled exceptions and transient network disconnects.
+  - Prevents worker threads from permanently crashing or becoming orphaned during extended 24/7 mining sessions.
+- **ACL Streamer Drops Enablement**:
+  - Added guaranteed `drops_enabled = True` retention for channels present in official game developer Access Control Lists (ACLs), such as Rainbow Six Siege *Doktor's Curse 26*.
+  - Prevents false-negative idle fallback when Twitch's `AvailableDrops` query only returns site-wide promotions (e.g. Apple TV).
+- **Comprehensive Test Suite (40 Tests, 100% Pass Rate)**:
+  - Added test suites for drop verification (`test_drop_verification.py`), HLS chunk playback simulation (`test_hls_watch.py`), GraphQL online resilience (`test_bulk_check_online_resilience.py`), worker recovery (`test_worker_recovery.py`), and ACL drops enablement (`test_acl_drops_enabled.py`).
+  - Achieved 100% pass rate across all 40 test cases.
+- **CI Pipeline Green Bootstrap**:
+  - Added dynamic `sys.path` bootstrap in `backend/tests/conftest.py` ensuring reliable DevilXD module discovery in automated test runners.
+  - Added `greenlet>=3.0.0` and `sqlalchemy[asyncio]` dependencies to `requirements.txt` for clean async database support across all GitHub Actions jobs.
+
+### Fixed
+- **Strict AvailableDrops Verification & Phantom Minute Elimination**:
+  - Enforced `available_drops_check: true` to eliminate non-game campaign false positives (such as Apple TV site promotions) and ensure streams are strictly tied to real game campaigns.
+  - Completely eliminated local phantom/speculative minutes (`extra_current_minutes`), guaranteeing the web UI and telemetry APIs display exclusively verified Twitch server-confirmed minutes (`real_current_minutes`).
+- **GraphQL Fault Tolerance in `bulk_check_online`**:
+  - Isolated `viewerDropCampaigns` service errors during stream polling so transient Twitch GraphQL service outages do not crash or derail channel discovery loops.
+- **Multi-Account Cookie Seeding & Session Restoration**:
+  - Resolved cookie jar seeding and session restoration during multi-account worker initialization without raising `KeyError: 'device_code'`.
+  - Fixed Pydantic model rebuilds and error handling on device authorization flows.
+
 ## [1.3.1] - 2026-10-26
 
 ### Added

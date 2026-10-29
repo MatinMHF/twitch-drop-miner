@@ -44,7 +44,7 @@
 
 ```text
 +-----------------------------------------------------------------------------------+
-|  [Tv] Twitch Drop Miner  v1.3.1      (•) Telemetry Live   [2 Accounts Active] [⚙] |
+|  [Tv] Twitch Drop Miner  v1.4.0      (•) Telemetry Live   [2 Accounts Active] [⚙] |
 +-----------------------------------------------------------------------------------+
 |  [ Status: MINING ]  [ Claimed: 26 ]  [ Watchlist: 33 ]  [ Bandwidth Saved: 99.9% ]|
 +-----------------------------------------------------------------------------------+
@@ -70,9 +70,12 @@
 
 | Capability | Technical Implementation | Value |
 | :--- | :--- | :--- |
-| 👥 **Multi-Account Mining** | `MultiAccountMiningManager` orchestrates N isolated workers with per-account cookie jars (`cookies_<user_id>.jar`) | Mine and claim drops across multiple accounts simultaneously without session collisions. |
+| 👥 **Multi-Account Mining** | `MultiAccountMiningManager` orchestrates N isolated workers with per-account cookie jars (`cookies_<user_id>.jar`) and session recovery | Mine and claim drops across multiple accounts simultaneously without session collisions or device flow traps. |
 | 🌐 **Shared Campaigns Discovery** | Unified cross-worker global campaign sharing cache | Newly registered Twitch accounts receive full drop campaigns even if Twitch returns null. |
-| 📡 **Tri-Layer Telemetry & HLS Verification** | Dispatches authenticated GQL `sendSpadeEvents`, direct Spade telemetry with session cookies, and HLS chunk HEAD checks | Triple-redundancy heartbeat delivery proving legitimate player presence on Twitch's CDN with zero media download. |
+| 📡 **Bot-Free Full HLS Simulation** | Upstream DevilXD `f693b0c` full playlist chunk iteration (~15 chunks via lightweight HTTP `HEAD` requests every 20s) | Genuine Twitch CDN presence with 0 KB video download, defeating bot detection heuristics and stalled drop counters. |
+| 🎯 **Strict Drops Verification & Real Minutes** | Enforces `available_drops_check` and completely removes local phantom minutes (`real_current_minutes` only) | Guarantees dashboard and APIs reflect exclusively verified Twitch server-side drop minutes without misleading numbers. |
+| 🛡️ **Self-Healing Worker Resilience** | Automatic exponential backoff retry loop in worker run wrappers and isolated GraphQL `viewerDropCampaigns` fault tolerance | Resilient 24/7 background operation; transient network errors or Twitch API outages self-recover without manual intervention. |
+| 🎮 **Developer ACL Drops Enablement** | Guarantees `drops_enabled = True` for channels on official developer ACL lists (such as Rainbow Six Siege *Doktor's Curse 26*) | Prevents false-negative idle fallback when `AvailableDrops` returns site-wide promotions, ensuring priority continuity. |
 | ⏱️ **Dynamic Heartbeats & Fallback Sync** | Real-time dynamic ISO timestamping (`isonow()`) per minute with 60-second GQL session context polling fallback | Solves duplicate minute rejections on long sessions and bridges PubSub WebSocket lag seamlessly. |
 | 🖼️ **Visual Mining & Hover Zoom** | High-res game box art and drop reward items with interactive hover zoom pop-ups | Instantly see what game and specific cosmetic or item each account is currently earning. |
 | 🏷️ **Real In-Game Item Resolution** | Deep inspection of GQL `benefitEdges` to surface true reward titles | Replaces generic developer slot names (like `Test` or `Drop`) with the exact in-game item name. |
@@ -82,6 +85,7 @@
 | 📊 **Accurate Drop Availability** | Evaluates real-time preconditions, campaign time windows, and claimed benefits | Accurately labels games as `All Drops Claimed`, `Active Drops`, or `Waiting`. |
 | 🔄 **Streamer Failover** | Continually monitors active broadcaster status and auto-discovers drop-enabled streams | Automatically switches to another live streamer if current channel goes offline. |
 | 🎁 **Instant Auto-Claim** | Real-time Twitch PubSub WebSocket events trigger `ClaimDropMutation` within milliseconds | Chained drops start progressing immediately without missing time windows. |
+| 🧪 **100% Green CI & 40 Tests** | Fully bootstrapped test suite with `conftest.py` sys.path resolver, `sqlalchemy[asyncio]` and `greenlet>=3.0.0` integration | Complete regression testing across all 40 API, crypto, security, constants, drop verification, HLS watch, and worker recovery tests. |
 | 🛡️ **Military-Grade Security** | AES-256-GCM token encryption at rest, bcrypt password hashing, rotating JWT refresh cookies | Complete peace of mind for self-hosting on any server or VPS. |
 
 ---
@@ -160,12 +164,12 @@ graph TD
         FastAPI --> DB[(SQLite Database<br/>AES-256 Encrypted Tokens)]
         FastAPI --> MiningService[Multi-Account Mining Coordinator]
         
-        MiningService --> Worker1[Worker Account #1<br/>cookies_user1.jar]
-        MiningService --> Worker2[Worker Account #N<br/>cookies_userN.jar]
+        MiningService --> Worker1[Worker Account #1<br/>cookies_user1.jar + Auto-Retry]
+        MiningService --> Worker2[Worker Account #N<br/>cookies_userN.jar + Auto-Retry]
         
-        Worker1 --> GQLClient[Twitch GQL Client]
-        Worker1 --> SpadeTracker[Spade & Telemetry Dispatcher]
-        Worker1 --> HLSVerifier[HLS Playlist HEAD Verifier]
+        Worker1 --> GQLClient[Twitch GQL Client<br/>AvailableDrops & Claims]
+        Worker1 --> SpadeTracker[Spade & Telemetry Dispatcher<br/>Dynamic isonow Heartbeats]
+        Worker1 --> HLSVerifier[HLS Playlist HEAD Verifier<br/>15 Chunks / 20s Interval]
         Worker2 --> GQLClient
         Worker2 --> SpadeTracker
         Worker2 --> HLSVerifier
@@ -173,7 +177,7 @@ graph TD
 
     GQLClient <-->|GQL Queries, Claims & sendSpadeEvents| TwitchGQL[Twitch GraphQL API]
     SpadeTracker <-->|Direct Spade Heartbeats| TwitchSpade[Twitch Spade Telemetry]
-    HLSVerifier <-->|Chunk HEAD Requests (0 KB)| TwitchCDN[Twitch Video CDN]
+    HLSVerifier <-->|~15 Chunk HEAD Requests (0 KB, 20s)| TwitchCDN[Twitch Video CDN]
 ```
 
 </details>

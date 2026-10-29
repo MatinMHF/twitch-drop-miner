@@ -18,7 +18,7 @@ class Settings(BaseSettings):
 
     # General App Config
     APP_NAME: str = "Twitch Drop Miner"
-    APP_VERSION: str = "3.2.0"
+    APP_VERSION: str = "1.4.0"
     ENVIRONMENT: str = "production"
     DEBUG: bool = False
     HOST: str = "0.0.0.0"
