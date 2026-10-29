@@ -207,7 +207,13 @@ twitch-drop-miner/
   - Implemented automatic self-healing retry loop with exponential backoff in `SingleAccountWorker._run_wrapper`, ensuring transient network or GQL errors automatically recover without leaving accounts permanently dead.
   - Added comprehensive test suites (`test_bulk_check_online_resilience.py` and `test_worker_recovery.py`), expanding test suite to 36 tests with 100% pass rate.
   - Successfully revived secondary account (`@mrblackmmb1`) into active concurrent mining alongside primary account (`@goldendragongt`).
-- [x] **Testing & Verification**: 100% test pass rate across all 36 API, crypto, security, constants, drop verification, HLS watch, and worker resilience test suites.
+- [x] **ACL Streamer Drops Enablement & Priority Continuity (v1.3.5)**:
+  - Fixed false-positive drop filter that disabled ACL streamers (like `itsspoit` and `varsitygaming`) when `AvailableDrops` returned only site-wide promos (e.g. Apple TV).
+  - Ensured channels on official developer ACL lists (such as Rainbow Six Siege Doktor's Curse 26) retain `drops_enabled = True`.
+  - Re-established priority mining order: `@goldendragongt` immediately began mining Rainbow Six Siege (`itsspoit` - *Ominous Downfall*), advancing live past 141/180m (78%).
+  - Confirmed `@mrblackmmb1` progressed from completed high-priority drops into active Apex Legends (*APEX Pack* via `NiceWigg`).
+  - Added test suite `test_acl_drops_enabled.py` verifying 40/40 tests passing (100%).
+- [x] **Testing & Verification**: 100% test pass rate across all 40 API, crypto, security, constants, drop verification, HLS watch, worker resilience, and ACL drops enablement test suites.
 
 ---
 
