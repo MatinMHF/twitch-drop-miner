@@ -23,6 +23,9 @@ from app.engine.devilxd_bridge import create_devilxd_instance, FastAPIBridgeGUIM
 class SingleAccountWorker:
     """Worker managing DevilXD engine lifecycle for a single Twitch account."""
 
+    INITIAL_RETRY_DELAY: float = 5.0
+    MAX_RETRY_DELAY: float = 60.0
+
     def __init__(self, account_id: str, twitch_user_id: str, twitch_username: str, on_change_cb: Any):
         self.account_id = account_id
         self.twitch_user_id = twitch_user_id
@@ -215,15 +218,36 @@ class SingleAccountWorker:
         await self.notify_change()
 
     async def _run_wrapper(self) -> None:
-        try:
-            if self.twitch:
-                await self.twitch.run()
-        except asyncio.CancelledError:
-            pass
-        except Exception as exc:
-            logger.error(f"DevilXD engine run loop for @{self.twitch_username} error: {exc}", exc_info=True)
-            self.error_message = str(exc)
-            await self.notify_change()
+        retry_delay = getattr(self, "INITIAL_RETRY_DELAY", 5.0)
+        max_retry_delay = getattr(self, "MAX_RETRY_DELAY", 60.0)
+        while self.is_running:
+            try:
+                if self.twitch:
+                    if getattr(self.twitch, "_session", None) is not None and getattr(self.twitch._session, "closed", False):
+                        self.twitch._session = None
+                    await self.twitch.run()
+                else:
+                    await asyncio.sleep(1)
+                    continue
+                # If run() exited cleanly without exception, exit wrapper
+                break
+            except asyncio.CancelledError:
+                break
+            except Exception as exc:
+                logger.error(f"DevilXD engine run loop for @{self.twitch_username} error: {exc}", exc_info=True)
+                self.error_message = str(exc)
+                await self.notify_change()
+
+                if not self.is_running:
+                    break
+
+                logger.info(f"Retrying DevilXD run loop for @{self.twitch_username} in {retry_delay}s...")
+                try:
+                    await asyncio.sleep(retry_delay)
+                except asyncio.CancelledError:
+                    break
+
+                retry_delay = min(retry_delay * 2, max_retry_delay)
 
     async def stop(self) -> None:
         self.is_running = False

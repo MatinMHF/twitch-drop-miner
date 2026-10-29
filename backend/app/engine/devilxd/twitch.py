@@ -1702,17 +1702,27 @@ class Twitch:
             ]
             try:
                 for coro in asyncio.as_completed(available_gql_tasks):
-                    response_list = await coro
-                    for response_json in response_list:
-                        available_info: JsonType = response_json["data"]["channel"]
-                        acl_available_drops_map[int(available_info["id"])] = (
-                            available_info["viewerDropCampaigns"] or []
-                        )
-            except Exception:
-                # asyncio.as_completed doesn't cancel tasks on errors
+                    try:
+                        response_list = await coro
+                        for response_json in response_list:
+                            if not isinstance(response_json, dict):
+                                continue
+                            channel_dict = (
+                                response_json.get("data", {}).get("channel")
+                                if isinstance(response_json.get("data"), dict)
+                                else None
+                            )
+                            if channel_dict and "id" in channel_dict:
+                                acl_available_drops_map[int(channel_dict["id"])] = (
+                                    channel_dict.get("viewerDropCampaigns") or []
+                                )
+                    except Exception as exc:
+                        logger.warning(f"AvailableDrops batch fetch in bulk_check_online failed: {exc}")
+            except Exception as exc:
+                logger.warning(f"AvailableDrops batch processing in bulk_check_online failed: {exc}")
                 for task in available_gql_tasks:
-                    task.cancel()
-                raise
+                    if not task.done():
+                        task.cancel()
         for channel in channels:
             channel_id = channel.id
             if channel_id not in acl_streams_map:
