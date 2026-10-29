@@ -202,7 +202,12 @@ twitch-drop-miner/
   - Iterates over all ~15 stream chunks in m3u8 playlist dispatching lightweight `HEAD` requests (0 bytes download, complete CDN playback simulation).
   - Reduced `WATCH_INTERVAL` to 20 seconds (`timedelta(seconds=20)`) to maintain persistent playback presence.
   - Verified live advancement from 8m -> 10m -> 12m (20%) on Twitch servers and live dashboard.
-- [x] **Testing & Verification**: 100% test pass rate across all 28 API, crypto, security, constants, drop verification, and HLS watch test suites.
+- [x] **Worker Resilience & AvailableDrops GQL Fault Tolerance (v1.3.4)**:
+  - Safeguarded `bulk_check_online` against transient Twitch GraphQL `viewerDropCampaigns` service errors, preventing unhandled exceptions from crashing the miner run loop.
+  - Implemented automatic self-healing retry loop with exponential backoff in `SingleAccountWorker._run_wrapper`, ensuring transient network or GQL errors automatically recover without leaving accounts permanently dead.
+  - Added comprehensive test suites (`test_bulk_check_online_resilience.py` and `test_worker_recovery.py`), expanding test suite to 36 tests with 100% pass rate.
+  - Successfully revived secondary account (`@mrblackmmb1`) into active concurrent mining alongside primary account (`@goldendragongt`).
+- [x] **Testing & Verification**: 100% test pass rate across all 36 API, crypto, security, constants, drop verification, HLS watch, and worker resilience test suites.
 
 ---
 
