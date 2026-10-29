@@ -41,7 +41,7 @@ class Stream:
             getattr(getattr(channel, "_twitch", None), "settings", None) is not None
             and getattr(channel._twitch.settings, "available_drops_check", False)
         )
-        self.drops_enabled: bool = not has_check
+        self.drops_enabled: bool = getattr(channel, "acl_based", False) or not has_check
         self.game: Game | None = Game(game) if game else None
         self.title: str = title
         self._stream_url: URLType | None = None
@@ -124,7 +124,9 @@ class Stream:
             if available_drops is not None
             else channel_data.get("available_drops") or channel_data.get("viewerDropCampaigns")
         )
-        if drops_to_check is not None:
+        if getattr(channel, "acl_based", False):
+            self.drops_enabled = True
+        elif drops_to_check is not None:
             self.drops_enabled = channel._check_drops_enabled(drops_to_check, stream=self)
         elif has_check:
             self.drops_enabled = False
@@ -357,6 +359,20 @@ class Channel:
     def _check_drops_enabled(
         self, available_drops: list[JsonType], stream: Stream | None = None
     ) -> bool:
+        inventory = getattr(self._twitch, "inventory", None) or []
+        if getattr(self, "acl_based", False) or any(
+            c.can_earn(self, ignore_channel_status=True)
+            for c in inventory
+            if getattr(c, "allowed_channels", None) and self in c.allowed_channels
+        ):
+            if any(
+                c.can_earn(self, ignore_channel_status=True)
+                for c in inventory
+                if getattr(c, "allowed_channels", None) and self in c.allowed_channels
+            ):
+                return True
+            if getattr(self, "acl_based", False):
+                return True
         if not available_drops:
             return False
         target_game = (stream.game if stream is not None else None) or self.game
@@ -392,7 +408,9 @@ class Channel:
             getattr(getattr(self, "_twitch", None), "settings", None) is not None
             and getattr(self._twitch.settings, "available_drops_check", False)
         )
-        if not stream.drops_enabled or has_check:
+        if getattr(self, "acl_based", False):
+            stream.drops_enabled = True
+        elif not stream.drops_enabled or has_check:
             stream.drops_enabled = self._check_drops_enabled(available_drops, stream=stream)
         self._stream = stream
 
@@ -414,7 +432,9 @@ class Channel:
             getattr(getattr(self, "_twitch", None), "settings", None) is not None
             and getattr(self._twitch.settings, "available_drops_check", False)
         )
-        if not stream.drops_enabled or has_check:
+        if getattr(self, "acl_based", False):
+            stream.drops_enabled = True
+        elif not stream.drops_enabled or has_check:
             try:
                 available_drops_campaigns: JsonType = await self._twitch.gql_request(
                     GQL_QUERIES["AvailableDrops"].with_variables({"channelID": str(self.id)})

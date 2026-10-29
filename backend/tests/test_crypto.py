@@ -29,7 +29,7 @@ def test_decryption_tampered_ciphertext():
     encrypted = cipher.encrypt("secret-token")
 
     # Corrupt the payload
-    corrupted = "X" + encrypted[1:]
+    corrupted = ("Y" if encrypted[0] == "X" else "X") + encrypted[1:]
     with pytest.raises(ValueError):
         cipher.decrypt(corrupted)
 

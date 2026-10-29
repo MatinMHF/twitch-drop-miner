@@ -1011,20 +1011,18 @@ class Twitch:
         """
         Determines if the given channel qualifies as a watching candidate.
         """
-        # exit early if stream is offline
-        if not channel.online:
+        # exit early if stream is offline or drops not enabled
+        if not channel.online or not channel.drops_enabled:
+            return False
+        if channel.game is None or (
+            channel.game not in self.wanted_games
+            and not any(c.game.is_special() and c.game in self.wanted_games for c in self.inventory)
+        ):
             return False
         for campaign in self.inventory:
-            if (
-                campaign.can_earn(channel)  # let the campaign do the "special games" check
-                and (
-                    # limit watching to the games the user wants
-                    channel.game is not None
-                    and channel.drops_enabled
-                    and channel.game in self.wanted_games
-                    # let the campaign ignore all channel-related checks
-                    or campaign.game.is_special()
-                )
+            if campaign.can_earn(channel) and (
+                channel.game in self.wanted_games
+                or (campaign.game.is_special() and campaign.game in self.wanted_games)
             ):
                 return True
         return False
